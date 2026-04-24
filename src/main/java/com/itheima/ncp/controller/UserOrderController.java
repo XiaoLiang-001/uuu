@@ -44,11 +44,15 @@ public class UserOrderController {
      */
     @GetMapping("/user/checkout")
     public String checkout(Authentication auth, Model model) {
+        // 当前登录用户 ID。
         long uid = requireUserId(auth);
+        // 结算页允许空购物车进入，但显式给出提示。
         if (cartService.listLines(uid).isEmpty()) {
             model.addAttribute("err", "购物车为空，无法结算");
         }
+        // 结算页展示购物车明细。
         model.addAttribute("lines", cartService.listLines(uid));
+        // 结算页展示总金额。
         model.addAttribute("cartTotal", cartService.sumCartTotal(uid));
         return "user/checkout";
     }
@@ -63,15 +67,20 @@ public class UserOrderController {
             @RequestParam("receiverAddress") String receiverAddress,
             Authentication auth,
             RedirectAttributes ra) {
+        // 当前登录用户 ID。
         long uid = requireUserId(auth);
         try {
+            // 由 service 负责完整下单流程（校验、写单、扣库存、清购物车）。
             long orderId = orderService.createOrderFromCart(uid, receiverName, receiverPhone, receiverAddress);
             ra.addFlashAttribute("msg", "订单已提交");
+            // 下单成功直接跳转订单详情页。
             return "redirect:/user/orders/" + orderId;
         } catch (IllegalArgumentException e) {
+            // 参数或业务规则不满足（如库存不足、地址为空）。
             ra.addFlashAttribute("err", e.getMessage() != null ? e.getMessage() : "下单失败");
             return "redirect:/user/checkout";
         } catch (IllegalStateException e) {
+            // 系统一致性异常（如扣库存失败）也回到结算页提示。
             ra.addFlashAttribute("err", e.getMessage() != null ? e.getMessage() : "下单失败");
             return "redirect:/user/checkout";
         }
@@ -82,27 +91,35 @@ public class UserOrderController {
      */
     @GetMapping("/user/orders")
     public String orders(Authentication auth, Model model) {
+        // 当前登录用户 ID。
         long uid = requireUserId(auth);
+        // 查询当前用户订单列表。
         List<ShopOrder> orders = orderService.listOrders(uid);
         model.addAttribute("orders", orders);
+        // 订单封面图映射：orderId -> cover。
         Map<Long, String> orderCovers = new HashMap<Long, String>();
+        // 订单商品数量映射：orderId -> itemCount。
         Map<Long, Integer> orderItemCounts = new HashMap<Long, Integer>();
+        // 聚合每笔订单的封面图和商品数，减少模板中复杂循环逻辑。
         for (ShopOrder o : orders) {
             if (o.getId() == null) {
                 continue;
             }
             List<OrderItem> its = orderService.listOrderItems(o.getId());
+            // 缓存每笔订单的条目数量，模板直接展示。
             orderItemCounts.put(o.getId(), its.size());
             for (OrderItem it : its) {
                 if (it.getProductId() == null) {
                     continue;
                 }
+                // 查询商品用于获取图片信息。
                 Product p = productService.getById(it.getProductId());
                 if (p == null) {
                     continue;
                 }
                 List<String> names = productService.splitStoredImageNames(p);
                 if (!names.isEmpty()) {
+                    // 取第一张图作为订单卡片封面后即可结束内层循环。
                     orderCovers.put(o.getId(), names.get(0));
                     break;
                 }
@@ -118,16 +135,21 @@ public class UserOrderController {
      */
     @GetMapping("/user/orders/{id:\\d+}")
     public String orderDetail(@PathVariable long id, Authentication auth, Model model, RedirectAttributes ra) {
+        // 当前登录用户 ID。
         long uid = requireUserId(auth);
+        // 按订单 ID + 用户 ID 查询，避免越权查看他人订单。
         ShopOrder o = orderService.getOrderForUser(id, uid);
         if (o == null) {
             ra.addFlashAttribute("err", "订单不存在");
             return "redirect:/user/orders";
         }
         model.addAttribute("order", o);
+        // 加载订单明细列表。
         List<OrderItem> items = orderService.listOrderItems(id);
         model.addAttribute("items", items);
+        // 明细封面图映射：productId -> cover。
         Map<Long, String> itemCovers = new HashMap<Long, String>();
+        // 以 productId 去重，避免同商品多次查封面图。
         for (OrderItem it : items) {
             if (it.getProductId() == null) {
                 continue;
@@ -141,6 +163,7 @@ public class UserOrderController {
             }
             List<String> in = productService.splitStoredImageNames(p2);
             if (!in.isEmpty()) {
+                // 商品有图时记录第一张封面。
                 itemCovers.put(it.getProductId(), in.get(0));
             }
         }
@@ -152,6 +175,7 @@ public class UserOrderController {
      * 解析当前登录用户 ID，不存在时抛出异常。
      */
     private long requireUserId(Authentication auth) {
+        // 统一委托 UserService 做登录态与用户校验。
         return userService.requireUserId(auth);
     }
 }

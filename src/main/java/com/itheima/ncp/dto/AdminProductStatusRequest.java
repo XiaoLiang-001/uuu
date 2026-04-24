@@ -7,5 +7,6 @@ import lombok.Data;
  */
 @Data
 public class AdminProductStatusRequest {
+    /** 目标状态值：ON_SHELF 或 OFF_SHELF。 */
     private String status;
 }

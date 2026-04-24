@@ -41,21 +41,27 @@ public class AuthApiController {
      */
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ApiResult<Map<String, Object>> login(@RequestBody LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
+        // 基础参数校验：账号必填。
         if (req == null || req.getUsername() == null || req.getUsername().trim().isEmpty()) {
             return ApiResult.fail(400, "请输入账号");
         }
+        // 密码必填（允许包含空格，不做 trim）。
         if (req.getPassword() == null) {
             return ApiResult.fail(400, "请输入密码");
         }
         try {
+            // 构造用户名密码令牌，交由 AuthenticationManager 认证。
             UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
                     req.getUsername().trim(), req.getPassword());
             Authentication auth = authenticationManager.authenticate(token);
+            // 认证成功后创建新的 SecurityContext。
             SecurityContext context = SecurityContextHolder.createEmptyContext();
             context.setAuthentication(auth);
             SecurityContextHolder.setContext(context);
+            // 将认证上下文保存到 Session，实现会话登录。
             securityContextRepository.saveContext(context, request, response);
 
+            // 根据权限判断当前角色，返回给前端做页面跳转。
             boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
             Map<String, Object> data = new LinkedHashMap<String, Object>();
             data.put("username", auth.getName());
@@ -64,10 +70,13 @@ public class AuthApiController {
             ok.setMessage("登录成功");
             return ok;
         } catch (DisabledException e) {
+            // 账号被禁用时返回 403。
             return ApiResult.fail(403, "该账号已被禁用，无法登录。如需使用请联系管理员处理。");
         } catch (BadCredentialsException e) {
+            // 账号或密码错误。
             return ApiResult.fail(401, "用户名或密码错误");
         } catch (AuthenticationException e) {
+            // 其他认证失败统一按服务异常处理。
             return ApiResult.fail(500, "登录失败，请重试");
         }
     }

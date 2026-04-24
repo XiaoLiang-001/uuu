@@ -18,19 +18,27 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class User {
 
+    /** 禁用状态码。 */
     public static final int STATUS_DISABLED = 0;
+    /** 启用状态码。 */
     public static final int STATUS_ENABLED = 1;
 
+    /** 用户主键。 */
     private Long id;
+    /** 登录账号。 */
     private String username;
+    /** 密码密文。 */
     private String password;
+    /** 角色。 */
     private UserRole role;
     /** 用户状态：0 禁用，1 启用 */
     private Integer status;
+    /** 注册时间。 */
     private LocalDateTime createdAt;
 
     /** 是否允许登录（status 为 {@link #STATUS_ENABLED}） */
     public boolean isEnabledAccount() {
+        // 仅当状态明确为启用时允许登录。
         return status != null && status == STATUS_ENABLED;
     }
 }

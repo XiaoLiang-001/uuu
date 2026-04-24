@@ -10,9 +10,13 @@ import java.math.BigDecimal;
 @Data
 public class AdminProductRowDto {
 
+    /** 商品ID。 */
     private Long id;
+    /** 商品名称。 */
     private String name;
+    /** 商品单价。 */
     private BigDecimal price;
+    /** 库存数量。 */
     private Integer stock;
     /** ON_SHELF / OFF_SHELF */
     private String status;

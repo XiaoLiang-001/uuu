@@ -36,6 +36,7 @@ public class AdminProductController {
      */
     @GetMapping("/admin/products")
     public String list() {
+        // 返回管理端商品列表页模板。
         return "admin/products";
     }
 
@@ -44,6 +45,7 @@ public class AdminProductController {
      */
     @GetMapping("/admin/products/new")
     public String newForm() {
+        // 返回新增商品页面模板。
         return "admin/product-form";
     }
 
@@ -61,19 +63,26 @@ public class AdminProductController {
             @RequestParam(value = "images", required = false) MultipartFile[] images,
             RedirectAttributes ra) {
         try {
+            // 字符串价格转 BigDecimal，避免浮点误差。
             BigDecimal price = new BigDecimal(priceStr.trim());
+            // 将状态字符串映射为枚举。
             ProductStatus status = ProductStatus.valueOf(statusStr.trim().toUpperCase());
+            // 仅允许上下架两个状态。
             if (status != ProductStatus.ON_SHELF && status != ProductStatus.OFF_SHELF) {
                 throw new IllegalArgumentException("状态只能选择上架或下架");
             }
+            // 记录操作者用户名（可为空）。
             String op = principal != null ? principal.getUsername() : null;
+            // 调用 service 执行创建与图片保存。
             productService.createProduct(op, name, description, price, stock, status, images);
             ra.addFlashAttribute("msg", "商品已创建");
         } catch (Exception e) {
+            // 优先返回业务异常信息，兜底返回通用提示。
             String m = e.getMessage() != null ? e.getMessage() : (e.getCause() != null ? e.getCause().getMessage() : "创建失败");
             ra.addFlashAttribute("error", m);
             return "redirect:/admin/products/new";
         }
+        // 成功后回到商品列表页。
         return "redirect:/admin/products";
     }
 
@@ -82,11 +91,13 @@ public class AdminProductController {
      */
     @GetMapping("/admin/products/{id:\\d+}")
     public String editForm(@PathVariable long id, Model model, RedirectAttributes ra) {
+        // 按 ID 查询商品。
         Product p = productService.getById(id);
         if (p == null) {
             ra.addFlashAttribute("err", "商品不存在");
             return "redirect:/admin/products";
         }
+        // 注入详情与图片列表供页面回显。
         model.addAttribute("product", p);
         model.addAttribute("imageNames", productService.splitStoredImageNames(p));
         return "admin/product-detail";
@@ -107,19 +118,23 @@ public class AdminProductController {
             @RequestParam(value = "removeImages", required = false) String[] removeImages,
             RedirectAttributes ra) {
         try {
+            // 解析并校验价格与状态。
             BigDecimal price = new BigDecimal(priceStr.trim());
             ProductStatus status = ProductStatus.valueOf(statusStr.trim().toUpperCase());
             if (status != ProductStatus.ON_SHELF && status != ProductStatus.OFF_SHELF) {
                 throw new IllegalArgumentException("状态只能选择上架或下架");
             }
+            // 调用 service 执行商品更新和图片增删。
             productService.updateProduct(id, name, description, price, stock, status, images, removeImages);
             ra.addFlashAttribute("msg", "已保存");
         } catch (IOException e) {
+            // 文件 IO 异常给出专门提示。
             ra.addFlashAttribute("error", "图片处理失败");
         } catch (Exception e) {
             String m = e.getMessage() != null ? e.getMessage() : "保存失败";
             ra.addFlashAttribute("error", m);
         }
+        // 无论成功失败都回详情页，由 flash 显示结果。
         return "redirect:/admin/products/" + id;
     }
 }

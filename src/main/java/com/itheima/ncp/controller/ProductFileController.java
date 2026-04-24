@@ -35,18 +35,22 @@ public class ProductFileController {
     @GetMapping("/files/products/{storedName:.+}")
     public ResponseEntity<Resource> serveByStoredName(@PathVariable String storedName,
                                                       @RequestParam(defaultValue = "false") boolean download) {
+        // 先校验文件名是否被商品引用，防止任意文件访问。
         if (!productService.isStoredImageRegistered(storedName)) {
             return ResponseEntity.notFound().build();
         }
+        // 解析物理文件路径并校验是否存在常规文件。
         Path path = fileStorageService.resolveStoredFile(storedName);
         if (path == null || !Files.isRegularFile(path)) {
             return ResponseEntity.notFound().build();
         }
+        // 构建文件资源对象。
         Resource resource = new FileSystemResource(path.toFile());
         if (!resource.exists()) {
             return ResponseEntity.notFound().build();
         }
 
+        // 默认二进制流类型，后续尽量探测真实 MIME。
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         try {
             String probe = Files.probeContentType(path);
@@ -54,12 +58,15 @@ public class ProductFileController {
                 mediaType = MediaType.parseMediaType(probe);
             }
         } catch (Exception ignored) {
+            // 探测失败时保持默认二进制类型。
             mediaType = MediaType.APPLICATION_OCTET_STREAM;
         }
 
+        // 组装响应头：内容类型 + inline/attachment。
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(mediaType);
         headers.setContentDispositionFormData(download ? "attachment" : "inline", storedName);
+        // 返回文件响应体。
         return ResponseEntity.ok().headers(headers).body(resource);
     }
 }

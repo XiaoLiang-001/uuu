@@ -49,15 +49,17 @@ public class PageController {
         return "{}";
     }
 
-    @GetMapping("/")
     /**
      * 根路径入口：根据当前登录角色分发到管理端或用户端首页。
      */
+    @GetMapping("/")
     public String index(Authentication authentication) {
+        // 未登录用户统一跳转登录页。
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             return "redirect:/login";
         }
+        // 统一在入口做角色分流，避免前端自行判断角色后再跳转。
         boolean admin = authentication.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         if (admin) {
@@ -71,6 +73,7 @@ public class PageController {
      */
     @GetMapping("/login")
     public String login(Authentication authentication) {
+        // 已登录用户无需重复访问登录页。
         if (authentication != null && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken)) {
             return "redirect:/";
@@ -83,6 +86,7 @@ public class PageController {
      */
     @GetMapping("/user/home")
     public String userHome(Authentication authentication, Model model) {
+        // 预加载当前用户资料，供壳页面顶部信息展示。
         bindUserProfile(authentication, model);
         return "user/home";
     }
@@ -92,6 +96,7 @@ public class PageController {
      */
     @GetMapping("/user/profile")
     public String userProfile(Authentication authentication, Model model) {
+        // 页面渲染前绑定资料模型。
         bindUserProfile(authentication, model);
         return "user/profile";
     }
@@ -101,6 +106,7 @@ public class PageController {
      */
     @GetMapping("/user/profile/edit")
     public String editUserProfile(Authentication authentication, Model model) {
+        // 编辑页同样复用资料绑定逻辑。
         bindUserProfile(authentication, model);
         return "user/profile-edit";
     }
@@ -117,22 +123,27 @@ public class PageController {
                                   HttpServletRequest request,
                                   HttpServletResponse response,
                                   RedirectAttributes ra) {
+        // 未登录状态下拒绝处理个人资料更新。
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             return "redirect:/login";
         }
         if (newPassword != null && !newPassword.trim().isEmpty()) {
             String cp = confirmPassword == null ? "" : confirmPassword.trim();
+            // 先在控制器做确认密码校验，减少 service 不必要调用。
             if (!newPassword.trim().equals(cp)) {
                 ra.addFlashAttribute("err", "两次输入的新密码不一致");
                 return "redirect:/user/profile/edit";
             }
         }
         try {
+            // 执行个人资料更新（用户名/密码）。
             userService.updateSelfProfile(authentication.getName(), username, oldPassword, newPassword);
+            // 用户名/密码变更后主动登出，强制新凭据重新建立会话。
             new SecurityContextLogoutHandler().logout(request, response, authentication);
             return "redirect:/login?profileUpdated";
         } catch (IllegalArgumentException e) {
+            // 业务校验失败（如密码错误）通过 flash 回显。
             ra.addFlashAttribute("err", e.getMessage());
             return "redirect:/user/profile/edit";
         }
@@ -142,22 +153,29 @@ public class PageController {
      * 将当前用户资料与状态标签写入页面模型，供前端模板渲染。
      */
     private void bindUserProfile(Authentication authentication, Model model) {
+        // 优先从认证信息读取用户名。
         String username = authentication != null ? authentication.getName() : "";
+        // 查询当前用户实体。
         User u = userService.getByUsername(username);
         if (u != null) {
+            // 防止模板中误用密码字段。
             u.setPassword(null);
             model.addAttribute("profile", u);
+            // 渲染角色相关展示信息。
             model.addAttribute("roleLabel", u.getRole() == UserRole.ADMIN ? "管理员" : "普通用户");
             model.addAttribute("isAdmin", u.getRole() == UserRole.ADMIN);
             if (u.getRole() != null) {
                 model.addAttribute("roleCode", u.getRole().name());
             }
             String un = u.getUsername();
+            // 头像字母取用户名首字符，缺省显示 ?。
             model.addAttribute("avatarLetter", (un != null && !un.isEmpty()) ? un.substring(0, 1) : "?");
             if (u.getCreatedAt() != null) {
+                // 创建时间转格式化字符串便于页面展示。
                 model.addAttribute("createdAtFormatted", CREATED_FMT.format(u.getCreatedAt()));
             }
             Integer st = u.getStatus();
+            // 将数据库状态码转换为页面可直接使用的标签与布尔标记。
             if (st == null) {
                 model.addAttribute("statusLabel", "未设置");
                 model.addAttribute("statusOk", false);
@@ -180,6 +198,7 @@ public class PageController {
                 model.addAttribute("accountDisabled", false);
             }
         } else {
+            // 用户不存在时提供缺失标记，页面可给出兜底提示。
             model.addAttribute("profileMissing", true);
             model.addAttribute("profileUsername", username);
             model.addAttribute("isAdmin", false);
@@ -191,6 +210,7 @@ public class PageController {
      */
     @GetMapping("/admin/home")
     public String adminHome() {
+        // 返回管理端壳页面模板。
         return "admin/home";
     }
 }

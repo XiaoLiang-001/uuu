@@ -43,6 +43,7 @@ public class AdminUserApiController {
     @GetMapping
     public ResponseEntity<ApiResult<List<AdminUserRowDto>>> list(
             @RequestParam(value = "keyword", required = false) String keyword) {
+        // 关键字可为空；为空时返回全量列表。
         return ResponseEntity.ok(ApiResult.ok(userService.listForAdmin(keyword)));
     }
 
@@ -52,8 +53,10 @@ public class AdminUserApiController {
     @GetMapping("/{id:\\d+}")
     public ResponseEntity<ApiResult<AdminUserRowDto>> getOne(@PathVariable Long id) {
         try {
+            // 查询单个用户并封装标准成功响应。
             return ResponseEntity.ok(ApiResult.ok(userService.getByIdForAdmin(id)));
         } catch (IllegalArgumentException e) {
+            // 业务异常（例如用户不存在）统一返回 400。
             String msg = e.getMessage() != null ? e.getMessage() : "用户不存在";
             return ResponseEntity.badRequest().body(ApiResult.fail(400, msg));
         }
@@ -66,10 +69,12 @@ public class AdminUserApiController {
     public ResponseEntity<ApiResult<Void>> create(
             @RequestBody AdminUserCreateRequest body,
             @AuthenticationPrincipal UserDetails principal) {
+        // API 层先做登录态兜底，避免进入 service 后才抛出非业务异常。
         if (principal == null) {
             return ResponseEntity.status(401).body(ApiResult.fail(401, "未登录"));
         }
         try {
+            // 空请求体直接返回 400，便于前端快速定位调用问题。
             if (body == null) {
                 return ResponseEntity.badRequest().body(ApiResult.fail(400, "请求体无效"));
             }
@@ -77,8 +82,10 @@ public class AdminUserApiController {
             String password = body.getPassword();
             String roleRaw = body.getRole();
             Integer statusRaw = body.getStatus();
+            // 角色为空时默认 USER，状态为空时默认启用。
             UserRole role = parseRole(roleRaw, UserRole.USER);
             int st = statusRaw != null ? statusRaw : 1;
+            // 具体业务校验（重复账号、权限等）由 service 统一负责。
             userService.createByAdmin(username, password, role, st, principal.getUsername());
             return ResponseEntity.ok(ApiResult.<Void>ok());
         } catch (IllegalArgumentException e) {
@@ -108,9 +115,11 @@ public class AdminUserApiController {
             String password = body.getPassword();
             String oldPassword = body.getOldPassword();
             Integer statusRaw = body.getStatus();
+            // 这里强制要求 status，避免“前端漏传导致状态被误改”。
             if (statusRaw == null) {
                 return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态不能为空"));
             }
+            // 调用 service 执行用户资料更新。
             userService.updateByAdmin(id, username, password, oldPassword, statusRaw, principal.getUsername());
             return ResponseEntity.ok(ApiResult.<Void>ok());
         } catch (IllegalArgumentException e) {
@@ -132,6 +141,7 @@ public class AdminUserApiController {
             return ResponseEntity.status(401).body(ApiResult.fail(401, "未登录"));
         }
         try {
+            // 删除规则（不可删管理员/当前用户）在 service 中集中控制。
             userService.deleteByAdmin(id, principal.getUsername());
             return ResponseEntity.ok(ApiResult.<Void>ok());
         } catch (IllegalArgumentException e) {
@@ -161,6 +171,7 @@ public class AdminUserApiController {
             if (statusRaw == null) {
                 return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态不能为空"));
             }
+            // 具体的可操作性判断（是否管理员、是否当前用户等）交由 service 统一处理。
             userService.updateStatusByAdmin(id, statusRaw, principal.getUsername());
             return ResponseEntity.ok(ApiResult.<Void>ok());
         } catch (IllegalArgumentException e) {
@@ -177,6 +188,7 @@ public class AdminUserApiController {
     private ResponseEntity<ApiResult<Void>> internalError(String action, Exception e) {
         String detail = e == null ? null : e.getMessage();
         String msg = action + "，服务器内部错误";
+        // 开发与联调阶段返回详细原因，帮助快速定位数据库或参数问题。
         if (detail != null && !detail.trim().isEmpty()) {
             msg = msg + "：" + detail;
         }
@@ -187,6 +199,7 @@ public class AdminUserApiController {
      * 将字符串角色值解析为枚举，支持空值回退默认角色。
      */
     private static UserRole parseRole(String roleStr, UserRole defaultIfBlank) {
+        // 空值时按默认角色回退。
         if (roleStr == null || roleStr.trim().isEmpty()) {
             if (defaultIfBlank != null) {
                 return defaultIfBlank;
@@ -194,8 +207,10 @@ public class AdminUserApiController {
             throw new IllegalArgumentException("请选择角色");
         }
         try {
+            // 统一大写后映射枚举，兼容前端大小写差异。
             return UserRole.valueOf(roleStr.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
+            // 抛出业务友好提示，而不是枚举原始异常信息。
             throw new IllegalArgumentException("角色无效");
         }
     }

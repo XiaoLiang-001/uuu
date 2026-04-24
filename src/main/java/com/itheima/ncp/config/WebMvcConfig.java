@@ -12,6 +12,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 将 /plugins/** 映射到 classpath 下的静态目录。
         registry.addResourceHandler("/plugins/**")
                 .addResourceLocations("classpath:/plugins/");
     }

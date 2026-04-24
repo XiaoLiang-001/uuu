@@ -47,30 +47,39 @@ public class UserMarketController {
     public String list(@RequestParam(value = "page", defaultValue = "1") int page,
                       @RequestParam(value = "size", defaultValue = "12") int size,
                       Model model) {
+        // 页码最小为 1。
         if (page < 1) {
             page = 1;
         }
+        // 页大小最小限制。
         if (size < 1) {
             size = 12;
         }
+        // 页大小最大限制，防止一次拉取过多数据。
         if (size > 48) {
             size = 48;
         }
+        // 查询总条数并计算总页数。
         int total = productService.countOnShelf();
         int totalPages = total == 0 ? 1 : (int) Math.ceil((double) total / size);
+        // 页码超界时截断到最后一页。
         if (page > totalPages) {
             page = totalPages;
         }
+        // 计算分页偏移量。
         int offset = (page - 1) * size;
+        // 查询当前页商品与首图映射。
         List<Product> products = productService.listOnShelfPage(offset, size);
         Map<Long, String> covers = productService.mapFirstImageStoredByProducts(products);
 
+        // 页面可选页大小列表，若当前 size 不在默认值中则动态补入。
         List<Integer> sizeChoices = new ArrayList<Integer>(DEFAULT_PAGE_SIZES);
         if (!sizeChoices.contains(size)) {
             sizeChoices.add(size);
             Collections.sort(sizeChoices);
         }
 
+        // 注入分页与商品数据给模板渲染。
         model.addAttribute("currentPage", page);
         model.addAttribute("pageSize", size);
         model.addAttribute("totalItems", total);
@@ -87,16 +96,19 @@ public class UserMarketController {
     @GetMapping("/user/market/{id:\\d+}")
     public String detail(@PathVariable long id, Authentication authentication, Model model,
                         RedirectAttributes ra) {
+        // 仅允许查看存在且上架中的商品。
         Product p = productService.getById(id);
         if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
             ra.addFlashAttribute("err", "商品不存在或已下架");
             return "redirect:/user/market";
         }
+        // 准备图片、描述与评价展示数据。
         List<String> imageNames = productService.splitStoredImageNames(p);
         String cover = imageNames.isEmpty() ? null : imageNames.get(0);
         String desc = p.getDescription();
         boolean descBlank = desc == null || desc.trim().isEmpty();
         List<ProductReview> reviews = productReviewService.listByProductId(id);
+        // 默认不可评价，登录且购买过后才可评价。
         boolean canReview = false;
         if (authentication != null && authentication.isAuthenticated()) {
             User u = userService.getByUsername(authentication.getName());
@@ -104,6 +116,7 @@ public class UserMarketController {
                 canReview = productReviewService.canUserReview(u.getId(), id);
             }
         }
+        // 注入详情页模型。
         model.addAttribute("product", p);
         model.addAttribute("imageNames", imageNames);
         model.addAttribute("coverImageName", cover);
