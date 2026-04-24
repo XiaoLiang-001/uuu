@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>用户中心 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="user-landing user-center-page">
+<div class="landing-bg" aria-hidden="true"></div>
+<header class="landing-topbar">
+    <div class="landing-topbar-inner user-center-topbar">
+        <div class="user-center-topbar-brand">
+            <span class="landing-logo">🌾 <strong>农家优品</strong></span>
+            <span class="landing-badge user-center-badge">用户中心</span>
+        </div>
+        <div class="user-center-nav">
+            <a th:href="@{/user/market}">返回集市</a>
+            <a th:href="@{/user/cart}">购物车</a>
+            <a th:href="@{/user/orders}">我的订单</a>
+            <form th:action="@{/logout}" method="post" class="inline">
+                <button type="submit" class="btn-landing ghost">退出登录</button>
+            </form>
+        </div>
+    </div>
+</header>
+<main class="landing-main user-center-main">
+    <th:block th:if="${profile != null}">
+        <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
+        <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+
+        <section class="user-center-hero">
+            <div class="user-center-avatar" th:text="${avatarLetter}">U</div>
+            <div class="user-center-hero-text">
+                <p class="landing-kicker">我的账户</p>
+                <h1 class="landing-title user-center-name" th:text="${profile.username}">用户名</h1>
+                <p class="user-center-role user-center-pills">
+                    <span class="user-center-role-pill" th:text="${roleLabel}">普通用户</span>
+                    <span class="user-center-status-pill"
+                          th:if="${statusLabel != null}"
+                          th:text="${statusLabel}"
+                          th:classappend="${statusOk} ? ' is-on' : ' is-off'">正常</span>
+                </p>
+            </div>
+        </section>
+
+        <div class="user-center-overview-grid">
+            <section class="user-center-panel" aria-label="账户信息">
+                <h2 class="user-center-panel-title">基本信息</h2>
+                <dl class="user-center-dl">
+                    <div class="user-center-row">
+                        <dt>用户 ID</dt>
+                        <dd th:text="${profile.id}">—</dd>
+                    </div>
+                    <div class="user-center-row">
+                        <dt>登录账号</dt>
+                        <dd th:text="${profile.username}">—</dd>
+                    </div>
+                    <div class="user-center-row">
+                        <dt>账号类型</dt>
+                        <dd th:text="${roleLabel}">—</dd>
+                    </div>
+                    <div class="user-center-row" th:if="${roleCode != null}">
+                        <dt>系统角色</dt>
+                        <dd><code class="user-center-code" th:text="${roleCode}">USER</code></dd>
+                    </div>
+                    <div class="user-center-row">
+                        <dt>账号状态</dt>
+                        <dd class="user-center-status-cell">
+                            <span class="user-center-status-pill"
+                                  th:if="${statusLabel != null}"
+                                  th:text="${statusLabel}"
+                                  th:classappend="${statusOk} ? ' is-on' : ' is-off'">—</span>
+                            <span class="user-center-status-hint muted"
+                                  th:if="${accountDisabled}">已禁用账号无法登录系统</span>
+                            <span class="user-center-status-hint muted"
+                                  th:if="${statusUnset}">请联系管理员核对账号状态</span>
+                        </dd>
+                    </div>
+                    <div class="user-center-row" th:if="${createdAtFormatted != null}">
+                        <dt>注册时间</dt>
+                        <dd th:text="${createdAtFormatted}">—</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="user-center-panel user-center-actions-panel" aria-label="账户操作">
+                <h2 class="user-center-panel-title">账户操作</h2>
+                <p class="muted user-center-edit-tip" th:if="${isAdmin}">管理员可通过下方按钮分别管理账号、购物车和订单。</p>
+                <p class="muted user-center-edit-tip" th:unless="${isAdmin}">可通过下方按钮分别进入编辑信息、购物车和订单页面。</p>
+                <div class="user-center-action-btns">
+                    <a class="btn-landing primary user-center-edit-entry" th:href="@{/user/profile/edit}">我的信息</a>
+                    <a class="btn-landing secondary user-center-edit-entry" th:href="@{/user/cart}">我的购物车</a>
+                    <a class="btn-landing secondary user-center-edit-entry" th:href="@{/user/orders}">我的订单</a>
+                </div>
+            </section>
+        </div>
+
+    </th:block>
+
+    <section class="user-center-panel user-center-error" th:if="${profile == null}">
+        <p class="landing-lead">暂时无法从数据库加载您的账户信息。</p>
+        <p class="muted" th:if="${profileUsername != null}">当前登录名：<span th:text="${profileUsername}">—</span></p>
+        <a class="btn-landing primary" th:href="@{/user/market}">前往农产品集市</a>
+    </section>
+</main>
+<p class="landing-footer-copy">绿色 · 健康 · 可追溯</p>
+</body>
+</html>

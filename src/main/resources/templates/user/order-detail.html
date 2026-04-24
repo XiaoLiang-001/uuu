@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>订单详情 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="market-page">
+<header class="market-header">
+    <div class="market-header-inner">
+        <a class="market-back" th:href="@{/user/orders}">← 我的订单</a>
+        <nav class="market-nav">
+            <a th:href="@{/user/market}">集市</a>
+        </nav>
+        <form th:action="@{/logout}" method="post" class="inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn ghost market-logout">退出</button>
+        </form>
+    </div>
+</header>
+<main class="market-detail" th:if="${order != null}">
+    <h1>订单详情</h1>
+    <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
+
+    <p><strong>订单号</strong>：<span th:text="${order.orderNo}">—</span></p>
+    <p><strong>应付金额</strong>：¥ <span th:text="${#numbers.formatDecimal(order.totalAmount,1,2)}">0</span></p>
+    <p><strong>状态</strong>：
+        <span th:if="${order.status != null && order.status.name() == 'ORDERED'}">已下单</span>
+        <span th:if="${order.status == null}">—</span>
+    </p>
+    <p><strong>下单时间</strong>：<span th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</span></p>
+
+    <h2 style="font-size:1.1rem;margin:24px 0 12px;">收货信息</h2>
+    <p><strong>收货人</strong>：<span th:text="${order.receiverName}">—</span></p>
+    <p><strong>联系电话</strong>：<span th:text="${order.receiverPhone}">—</span></p>
+    <p><strong>收货地址</strong>：<span style="white-space:pre-wrap;" th:text="${order.receiverAddress}">—</span></p>
+
+    <h2 style="font-size:1.1rem;margin:24px 0 12px;">商品明细</h2>
+    <div class="market-table-wrap">
+        <table class="market-table">
+            <thead>
+            <tr><th>图片</th><th>商品</th><th>单价</th><th>数量</th><th>小计</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="it : ${items}">
+                <td>
+                    <img th:if="${it.productId != null and itemCovers != null and itemCovers.containsKey(it.productId)}"
+                         class="market-thumb"
+                         th:src="@{/files/products/{n}(n=${itemCovers.get(it.productId)})}" alt=""/>
+                    <span th:unless="${it.productId != null and itemCovers != null and itemCovers.containsKey(it.productId)}"
+                          class="market-noimg">暂无图片</span>
+                </td>
+                <td>
+                    <a th:if="${it.productId != null}"
+                       th:href="@{/user/market/{id}(id=${it.productId})}"
+                       th:text="${it.productName}"
+                       style="color:#2d5a28;text-decoration:none;font-weight:600;">名称</a>
+                    <span th:unless="${it.productId != null}" th:text="${it.productName}">名称</span>
+                </td>
+                <td>¥ <span th:text="${#numbers.formatDecimal(it.unitPrice,1,2)}">0</span></td>
+                <td th:text="${it.quantity}">1</td>
+                <td>¥ <span th:text="${#numbers.formatDecimal(it.subtotal,1,2)}">0</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>我的订单 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="market-page">
+<header class="market-header">
+    <div class="market-header-inner">
+        <a class="market-back" th:href="@{/user/profile}">← 返回用户中心</a>
+        <nav class="market-nav">
+            <a th:href="@{/user/cart}">购物车</a>
+            <a th:href="@{/user/profile}">用户中心</a>
+        </nav>
+        <form th:action="@{/logout}" method="post" class="inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn ghost market-logout">退出</button>
+        </form>
+    </div>
+</header>
+<main class="market-detail">
+    <h1>我的订单</h1>
+    <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
+    <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+
+    <div th:if="${#lists.isEmpty(orders)}" class="muted">暂无订单。</div>
+
+    <section th:if="${!#lists.isEmpty(orders)}" class="order-list">
+        <article class="order-card" th:each="o : ${orders}">
+            <div class="order-card-main">
+                <a class="order-card-cover-link" th:href="@{/user/orders/{id}(id=${o.id})}">
+                    <img th:if="${orderCovers != null and orderCovers.containsKey(o.id)}" class="order-card-cover"
+                         th:src="@{/files/products/{n}(n=${orderCovers.get(o.id)})}" alt=""/>
+                    <span th:unless="${orderCovers != null and orderCovers.containsKey(o.id)}" class="order-card-cover-placeholder">暂无图片</span>
+                </a>
+                <div class="order-card-content">
+                    <div class="order-card-head">
+                        <p class="order-card-no">
+                            <span class="order-card-label">订单号</span>
+                            <strong th:text="${o.orderNo}">—</strong>
+                        </p>
+                        <span class="order-status-badge"
+                              th:if="${o.status != null && o.status.name() == 'ORDERED'}">已下单</span>
+                        <span class="order-status-badge is-muted" th:if="${o.status == null}">状态未知</span>
+                    </div>
+                    <div class="order-card-meta">
+                        <p>
+                            <span class="order-card-label">订单金额</span>
+                            <span class="order-card-price">¥ <strong th:text="${#numbers.formatDecimal(o.totalAmount,1,2)}">0.00</strong></span>
+                        </p>
+                        <p>
+                            <span class="order-card-label">商品数量</span>
+                            <span th:text="${orderItemCounts != null and orderItemCounts.containsKey(o.id) ? orderItemCounts.get(o.id) + ' 件' : '—'}">—</span>
+                        </p>
+                        <p>
+                            <span class="order-card-label">下单时间</span>
+                            <span th:text="${o.createdAt != null ? #temporals.format(o.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="order-card-actions">
+                <a class="btn-landing secondary order-card-btn" th:href="@{/user/orders/{id}(id=${o.id})}">查看详情</a>
+            </div>
+        </article>
+    </section>
+</main>
+</body>
+</html>

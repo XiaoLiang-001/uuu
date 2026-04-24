@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="'编辑 · ' + ${product.name} + ' · 农家优品'">商品编辑</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="admin-product-form-agri">
+<div class="admin-product-form-pattern" aria-hidden="true"></div>
+<div class="admin-product-form-shell">
+    <header class="product-form-topbar">
+        <div class="product-form-topbar-inner">
+            <span class="product-form-brand">🌾 <strong>农家优品</strong> · 编辑商品</span>
+            <div class="product-form-topbar-actions">
+                <a th:href="@{/admin/products}">返回列表</a>
+                <form th:action="@{/logout}" method="post" class="inline">
+                    <button type="submit" class="product-form-logout-btn">退出</button>
+                </form>
+            </div>
+        </div>
+    </header>
+    <main class="product-form-main product-edit-main">
+        <div class="product-form-card product-edit-card">
+            <h1 th:text="${product.name}">商品</h1>
+            <p class="product-edit-subtitle">可在此修改名称、描述、价格、库存与图片；保存后立即生效。</p>
+
+            <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
+            <p th:if="${error}" class="user-shop-alert err" th:text="${error}">错误</p>
+
+            <form th:action="@{/admin/products/{id}(id=${product.id})}" method="post" enctype="multipart/form-data" class="product-edit-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <div class="product-edit-layout">
+                    <section class="product-edit-section">
+                        <h2>基础信息</h2>
+                        <label>
+                            商品名称
+                            <input type="text" name="name" required maxlength="128" th:value="${product.name}"/>
+                        </label>
+                        <label>
+                            商品描述
+                            <textarea name="description" rows="5" th:text="${product.description}"></textarea>
+                        </label>
+                        <div class="product-edit-grid-two">
+                            <label>
+                                单价（元）
+                                <input type="number" name="price" step="0.01" min="0" required th:value="${product.price}"/>
+                            </label>
+                            <label>
+                                库存
+                                <input type="number" name="stock" min="0" required th:value="${product.stock}"/>
+                            </label>
+                        </div>
+                        <label class="product-edit-status-field">
+                            状态
+                            <select name="status">
+                                <option value="ON_SHELF" th:selected="${product.status != null and product.status.name() == 'ON_SHELF'}">上架</option>
+                                <option value="OFF_SHELF" th:selected="${product.status != null and product.status.name() == 'OFF_SHELF'}">下架</option>
+                            </select>
+                        </label>
+                    </section>
+                    <section class="product-edit-section product-edit-media-section">
+                        <h2>已有图片</h2>
+                        <p class="muted product-edit-hint">勾选「移除」后保存，将从商品中删除该图；若无其它商品引用，将同时删除磁盘文件。</p>
+                        <div class="product-edit-gallery" th:if="${!#lists.isEmpty(imageNames)}">
+                            <div class="product-edit-img-item" th:each="n : ${imageNames}">
+                                <img th:src="@{/files/products/{name}(name=${n})}" th:alt="${n}"/>
+                                <label>
+                                    <input type="checkbox" name="removeImages" th:value="${n}"/> 移除此图
+                                </label>
+                            </div>
+                        </div>
+                        <p th:if="${#lists.isEmpty(imageNames)}" class="muted product-edit-empty-tip">暂无图片，可在下方追加。</p>
+
+                        <label>
+                            追加新图片（可多选，jpg/png/gif/webp）
+                            <input type="file" name="images" accept="image/*" multiple/>
+                        </label>
+                        <div id="productImagesPreviewBox" class="product-form-preview-box" hidden>
+                            <p class="product-form-preview-kicker">待上传图片预览</p>
+                            <div id="productImagesPreview" class="product-form-preview-wrap"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="product-edit-actions">
+                    <a th:href="@{/admin/products}" class="btn-landing secondary product-edit-back-btn">返回列表</a>
+                    <button type="submit" class="product-form-submit-btn product-edit-submit-btn">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+<script>
+(function () {
+    var stock = document.querySelector('input[name="stock"]');
+    if (!stock) return;
+    stock.addEventListener('focus', function () {
+        var t = String(this.value).trim();
+        if (t === '0' || t === '0.0' || t === '0.00') {
+            this.value = '';
+        }
+    });
+    stock.addEventListener('blur', function () {
+        if (String(this.value).trim() === '') {
+            this.value = '0';
+        }
+    });
+})();
+</script>
+<script th:src="@{/js/product-image-preview.js}"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>确认订单 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="market-page">
+<header class="market-header">
+    <div class="market-header-inner">
+        <a class="market-back" th:href="@{/user/cart}">← 返回购物车</a>
+        <nav class="market-nav">
+            <a th:href="@{/user/market}">集市</a>
+        </nav>
+        <form th:action="@{/logout}" method="post" class="inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn ghost market-logout">退出</button>
+        </form>
+    </div>
+</header>
+<main class="market-detail">
+    <h1>确认订单</h1>
+
+    <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+
+    <section class="checkout-items">
+        <h2 class="checkout-section-title">商品清单</h2>
+        <div class="checkout-item-list">
+            <article class="checkout-item" th:each="line : ${lines}">
+                <a class="checkout-item-cover-link" th:href="@{/user/market/{id}(id=${line.productId})}">
+                    <img th:if="${line.coverStoredName != null}" class="checkout-item-cover"
+                         th:src="@{/files/products/{n}(n=${line.coverStoredName})}" alt=""/>
+                    <span th:if="${line.coverStoredName == null}" class="checkout-item-cover-placeholder">暂无图片</span>
+                </a>
+                <div class="checkout-item-main">
+                    <a class="checkout-item-name"
+                       th:href="@{/user/market/{id}(id=${line.productId})}"
+                       th:text="${line.productName}">名称</a>
+                    <p>单价：¥ <span th:text="${#numbers.formatDecimal(line.unitPrice,1,2)}">0.00</span></p>
+                    <p>数量：<span th:text="${line.quantity}">1</span></p>
+                    <p class="checkout-item-subtotal">小计：¥ <strong th:text="${#numbers.formatDecimal(line.lineSubtotal,1,2)}">0.00</strong></p>
+                </div>
+            </article>
+        </div>
+        <p class="checkout-total">应付：¥ <span th:text="${#numbers.formatDecimal(cartTotal,1,2)}">0</span></p>
+    </section>
+
+    <section class="checkout-form-card">
+        <h2 class="checkout-section-title">收货信息</h2>
+        <form th:action="@{/user/orders}" method="post" class="checkout-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <label class="checkout-form-field">
+                <span>收货人</span>
+                <input type="text" name="receiverName" required="required" maxlength="64" placeholder="请输入收货人姓名"/>
+            </label>
+            <label class="checkout-form-field">
+                <span>联系电话</span>
+                <input type="text" name="receiverPhone" required="required" maxlength="32" placeholder="请输入手机号或联系电话"/>
+            </label>
+            <label class="checkout-form-field">
+                <span>收货地址</span>
+                <textarea name="receiverAddress" required="required" maxlength="512" rows="3"
+                          placeholder="请输入详细地址（街道、门牌号等）"></textarea>
+            </label>
+            <button type="submit" class="btn primary checkout-submit-btn">提交订单</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

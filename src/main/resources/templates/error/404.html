@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>页面未找到</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<main class="content" style="max-width:32rem;margin:3rem auto;">
+    <h1>404 · 页面未找到</h1>
+    <p class="muted">请求的地址不存在，或已被移动。请检查浏览器地址栏中的路径是否正确。</p>
+    <p>
+        <a th:href="@{/login}">登录</a>
+        <span class="muted"> · </span>
+        <a th:href="@{/user/market}">农产品集市</a>
+        <span class="muted"> · </span>
+        <a th:href="@{/admin/products}">管理端商品列表</a>
+    </p>
+</main>
+</body>
+</html>

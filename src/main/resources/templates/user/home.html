@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>用户中心 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="user-landing">
+<div class="landing-bg admin-landing-bg" aria-hidden="true"></div>
+<div class="admin-console">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-brand">
+            <span class="admin-sidebar-logo" aria-hidden="true">🌾</span>
+            <div class="admin-sidebar-brand-text">
+                <strong>农家优品</strong>
+                <span>客户端</span>
+            </div>
+        </div>
+        <nav class="admin-sidebar-nav" aria-label="客户端功能">
+            <a class="admin-nav-item is-active"
+               th:href="@{/user/market}"
+               th:attr="data-frame-url=@{/user/market}"
+               data-match-prefix="/user/market">
+                <span class="admin-nav-icon" aria-hidden="true">🛒</span>
+                <span>农产品集市</span>
+            </a>
+            <a class="admin-nav-item"
+               th:href="@{/user/cart}"
+               th:attr="data-frame-url=@{/user/cart}"
+               data-match-prefix="/user/cart,/user/checkout">
+                <span class="admin-nav-icon" aria-hidden="true">🧺</span>
+                <span>购物车</span>
+            </a>
+            <a class="admin-nav-item"
+               th:href="@{/user/orders}"
+               th:attr="data-frame-url=@{/user/orders}"
+               data-match-prefix="/user/orders">
+                <span class="admin-nav-icon" aria-hidden="true">📄</span>
+                <span>我的订单</span>
+            </a>
+            <a class="admin-nav-item"
+               th:href="@{/user/profile}"
+               th:attr="data-frame-url=@{/user/profile}"
+               data-match-prefix="/user/profile">
+                <span class="admin-nav-icon" aria-hidden="true">👤</span>
+                <span>用户中心</span>
+            </a>
+        </nav>
+        <form th:action="@{/logout}" method="post" class="inline admin-sidebar-logout-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn-landing ghost admin-ghost admin-sidebar-logout">退出登录</button>
+        </form>
+    </aside>
+    <main class="admin-console-main">
+        <section class="admin-frame-panel user-shell-frame">
+            <div id="user-shell-loading" class="user-shell-loading" aria-live="polite">
+                <span class="user-shell-spinner" aria-hidden="true"></span>
+                <span>页面加载中...</span>
+            </div>
+            <iframe id="user-content-frame" class="admin-content-frame" title="客户端内容区"></iframe>
+        </section>
+    </main>
+</div>
+<script>
+    (function () {
+        var frame = document.getElementById('user-content-frame');
+        var loadingMask = document.getElementById('user-shell-loading');
+        var navItems = Array.prototype.slice.call(document.querySelectorAll('.admin-nav-item[data-frame-url]'));
+        var STORAGE_KEY = 'user_shell_last_url_v1';
+        var loadingTimer = null;
+        var currentPath = '';
+
+        function splitPrefixes(raw) {
+            if (!raw) {
+                return [];
+            }
+            return raw.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+        }
+
+        function setLoading(flag) {
+            if (!loadingMask) {
+                return;
+            }
+            loadingMask.style.display = flag ? 'inline-flex' : 'none';
+        }
+
+        function clearLoadingTimer() {
+            if (loadingTimer) {
+                clearTimeout(loadingTimer);
+                loadingTimer = null;
+            }
+        }
+
+        function resetLoadingTimeout() {
+            clearLoadingTimer();
+            loadingTimer = setTimeout(function () {
+                setLoading(false);
+                window.alert('页面加载超时，请稍后重试。');
+            }, 12000);
+        }
+
+        function isKnownNavUrl(url) {
+            if (!url) {
+                return false;
+            }
+            return navItems.some(function (item) {
+                return item.getAttribute('data-frame-url') === url;
+            });
+        }
+
+        function setActiveByPath(pathname) {
+            navItems.forEach(function (item) {
+                var prefixes = splitPrefixes(item.getAttribute('data-match-prefix'));
+                var active = prefixes.some(function (prefix) {
+                    return pathname === prefix || pathname.indexOf(prefix + '/') === 0;
+                });
+                item.classList.toggle('is-active', active);
+            });
+        }
+
+        function openFrame(url, forceRefresh) {
+            if (!url) {
+                return;
+            }
+            if (!forceRefresh && currentPath === url) {
+                return;
+            }
+            var target = url;
+            if (forceRefresh) {
+                target += (url.indexOf('?') >= 0 ? '&' : '?') + '_refresh=' + Date.now();
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY, url);
+            } catch (e) {}
+            currentPath = url;
+            setLoading(true);
+            resetLoadingTimeout();
+            frame.setAttribute('src', target);
+        }
+
+        function syncActiveByFrameLocation() {
+            try {
+                var pathname = frame.contentWindow && frame.contentWindow.location
+                    ? frame.contentWindow.location.pathname
+                    : '';
+                if (pathname) {
+                    setActiveByPath(pathname);
+                }
+            } catch (e) {
+                // 同源页面可读；异常时保留当前状态。
+            }
+        }
+
+        function stripEmbeddedButtons() {
+            try {
+                var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+                if (!doc || !doc.body) {
+                    return;
+                }
+                if (doc.getElementById('embedded-shell-style')) {
+                    return;
+                }
+                var style = doc.createElement('style');
+                style.id = 'embedded-shell-style';
+                style.textContent = [
+                    '.market-header,',
+                    '.landing-topbar,',
+                    '.product-form-topbar,',
+                    '.admin-landing-topbar,',
+                    '.market-logout,',
+                    '.market-back,',
+                    '.user-center-nav,',
+                    '.admin-products-nav-link,',
+                    '.admin-users-nav-link,',
+                    'form[action="/logout"],',
+                    'form[action$="/logout"] { display: none !important; }',
+                    '.market-main, .market-detail, .landing-main {',
+                    '  margin-top: 0 !important;',
+                    '  padding-top: 16px !important;',
+                    '}',
+                    'body { min-height: auto !important; }'
+                ].join('\n');
+                doc.head.appendChild(style);
+            } catch (e) {
+                // 同源页面可读；异常时保留原始样式。
+            }
+        }
+
+        navItems.forEach(function (item) {
+            item.addEventListener('click', function (e) {
+                var url = item.getAttribute('data-frame-url');
+                if (url) {
+                    e.preventDefault();
+                    openFrame(url, false);
+                    var prefixes = splitPrefixes(item.getAttribute('data-match-prefix'));
+                    if (prefixes.length > 0) {
+                        setActiveByPath(prefixes[0]);
+                    }
+                }
+            });
+        });
+
+        frame.addEventListener('load', function () {
+            syncActiveByFrameLocation();
+            stripEmbeddedButtons();
+            clearLoadingTimer();
+            setLoading(false);
+        });
+        var initialUrl = navItems.length > 0 ? navItems[0].getAttribute('data-frame-url') : '';
+        try {
+            var cached = localStorage.getItem(STORAGE_KEY);
+            if (isKnownNavUrl(cached)) {
+                initialUrl = cached;
+            }
+        } catch (e) {}
+        openFrame(initialUrl, false);
+    })();
+</script>
+</body>
+</html>

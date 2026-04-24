@@ -1,0 +1,24 @@
+# 单元测试使用内存 H2，不依赖本机 MySQL
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:h2:mem:ncptest;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    # Boot 2.4：classpath:schema.sql 在测试环境初始化表结构
+    initialization-mode: always
+    druid:
+      initial-size: 1
+      min-idle: 1
+      max-active: 2
+      test-while-idle: true
+      validation-query: "SELECT 1"
+
+mybatis:
+  type-aliases-package: com.itheima.ncp.entity,com.itheima.ncp.entity.user,com.itheima.ncp.entity.product,com.itheima.ncp.entity.shop
+  type-handlers-package: com.itheima.ncp.type
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler

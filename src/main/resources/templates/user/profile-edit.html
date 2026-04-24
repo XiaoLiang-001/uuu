@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>编辑信息 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="user-landing user-center-page user-center-edit-page">
+<div class="landing-bg" aria-hidden="true"></div>
+<header class="landing-topbar">
+    <div class="landing-topbar-inner user-center-topbar">
+        <div class="user-center-topbar-brand">
+            <span class="landing-logo">🌾 <strong>农家优品</strong></span>
+            <span class="landing-badge user-center-badge">编辑信息</span>
+        </div>
+        <div class="user-center-nav">
+            <a th:href="@{/user/profile}">返回用户中心</a>
+            <a th:href="@{/user/market}">返回集市</a>
+            <a th:href="@{/user/orders}">我的订单</a>
+            <form th:action="@{/logout}" method="post" class="inline">
+                <button type="submit" class="btn-landing ghost">退出登录</button>
+            </form>
+        </div>
+    </div>
+</header>
+<main class="landing-main user-center-main">
+    <section class="user-center-panel user-center-actions-panel" th:if="${profile != null}">
+        <p class="landing-kicker">账户安全</p>
+        <h1 class="user-center-panel-title user-center-edit-title">编辑我的信息</h1>
+        <p class="muted user-center-edit-tip">修改成功后会自动退出，请使用新账号重新登录。</p>
+        <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+        <form id="user-center-edit-form" class="user-center-edit-form" th:action="@{/user/profile/update}" method="post" novalidate autocomplete="off">
+            <input type="text" name="fake_username" autocomplete="username" tabindex="-1"
+                   aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;"/>
+            <input type="password" name="fake_password" autocomplete="new-password" tabindex="-1"
+                   aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;"/>
+            <label class="user-center-edit-label" for="profile-username">登录账号</label>
+            <input id="profile-username" name="username" class="user-center-edit-input"
+                   th:value="${profile.username}" maxlength="64" required
+                   autocomplete="off" autocapitalize="off" spellcheck="false"
+                   readonly onfocus="this.removeAttribute('readonly');"/>
+
+            <label class="user-center-edit-label" for="profile-old-password">当前密码</label>
+            <input id="profile-old-password" name="oldPassword" class="user-center-edit-input"
+                   type="password" maxlength="128" required
+                   autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+
+            <label class="user-center-edit-label" for="profile-new-password">新密码（可选）</label>
+            <input id="profile-new-password" name="newPassword" class="user-center-edit-input"
+                   type="password" maxlength="128" placeholder="留空表示不修改密码"
+                   autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+
+            <label class="user-center-edit-label" for="profile-confirm-password">确认新密码</label>
+            <input id="profile-confirm-password" name="confirmPassword" class="user-center-edit-input"
+                   type="password" maxlength="128" placeholder="填写新密码时请再次输入"
+                   autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+            <p id="profile-password-error" class="user-center-edit-error" aria-live="polite"></p>
+
+            <div class="user-center-edit-actions">
+                <button type="submit" class="btn-landing primary user-center-save-btn">保存修改</button>
+                <a class="btn-landing secondary" th:href="@{/user/profile}">取消</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="user-center-panel user-center-error" th:if="${profile == null}">
+        <p class="landing-lead">暂时无法从数据库加载您的账户信息。</p>
+        <a class="btn-landing primary" th:href="@{/user/profile}">返回用户中心</a>
+    </section>
+</main>
+<p class="landing-footer-copy">绿色 · 健康 · 可追溯</p>
+<script>
+    (function () {
+        var form = document.getElementById('user-center-edit-form');
+        if (!form) return;
+        var newPasswordInput = document.getElementById('profile-new-password');
+        var confirmPasswordInput = document.getElementById('profile-confirm-password');
+        var errorTip = document.getElementById('profile-password-error');
+
+        function validatePasswordMatch() {
+            var newPwd = (newPasswordInput.value || '').trim();
+            var confirmPwd = (confirmPasswordInput.value || '').trim();
+            var mismatch = newPwd.length > 0 && newPwd !== confirmPwd;
+            if (mismatch) {
+                errorTip.textContent = '两次输入的新密码不一致。';
+                confirmPasswordInput.classList.add('is-invalid');
+                confirmPasswordInput.setAttribute('aria-invalid', 'true');
+                return false;
+            }
+            errorTip.textContent = '';
+            confirmPasswordInput.classList.remove('is-invalid');
+            confirmPasswordInput.removeAttribute('aria-invalid');
+            return true;
+        }
+
+        newPasswordInput.addEventListener('input', validatePasswordMatch);
+        confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+        form.addEventListener('submit', function (event) {
+            if (!validatePasswordMatch()) {
+                event.preventDefault();
+                confirmPasswordInput.focus();
+            }
+        });
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itheima.ncp.mapper.cart.CartItemMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO cart_item (user_id, product_id, quantity)
+        VALUES (#{userId}, #{productId}, #{quantity})
+    </insert>
+
+    <select id="findByUserId" resultType="com.itheima.ncp.entity.shop.CartItem">
+        SELECT id, user_id, product_id, quantity, created_at, updated_at
+        FROM cart_item WHERE user_id = #{userId} ORDER BY id DESC
+    </select>
+
+    <select id="findByUserIdAndProductId" resultType="com.itheima.ncp.entity.shop.CartItem">
+        SELECT id, user_id, product_id, quantity, created_at, updated_at
+        FROM cart_item WHERE user_id = #{userId} AND product_id = #{productId} LIMIT 1
+    </select>
+
+    <update id="updateQuantity">
+        UPDATE cart_item SET quantity = #{quantity}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByIdAndUserId">
+        DELETE FROM cart_item WHERE id = #{id} AND user_id = #{userId}
+    </delete>
+
+    <delete id="deleteByUserId">
+        DELETE FROM cart_item WHERE user_id = #{userId}
+    </delete>
+</mapper>

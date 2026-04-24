@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>购物车 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="market-page">
+<header class="market-header">
+    <div class="market-header-inner">
+        <a class="market-back" th:href="@{/user/profile}">← 返回用户中心</a>
+        <nav class="market-nav">
+            <a th:href="@{/user/profile}">用户中心</a>
+            <a th:href="@{/user/orders}">我的订单</a>
+        </nav>
+        <form th:action="@{/logout}" method="post" class="inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn ghost market-logout">退出</button>
+        </form>
+    </div>
+</header>
+<main class="market-detail">
+    <h1>购物车</h1>
+
+    <p th:if="${msg}" class="user-shop-alert ok js-flash-alert" data-level="ok" th:text="${msg}">提示</p>
+    <p th:if="${err}" class="user-shop-alert err js-flash-alert" data-level="err" th:text="${err}">错误</p>
+
+    <div th:if="${#lists.isEmpty(lines)}" class="muted">购物车还是空的，去集市逛逛吧。</div>
+
+    <section th:if="${!#lists.isEmpty(lines)}" class="cart-list">
+        <article class="cart-item" th:each="line : ${lines}">
+            <a class="cart-item-cover-link" th:href="@{/user/market/{id}(id=${line.productId})}">
+                <img th:if="${line.coverStoredName != null}" class="cart-item-cover"
+                     th:src="@{/files/products/{n}(n=${line.coverStoredName})}" alt=""/>
+                <span th:if="${line.coverStoredName == null}" class="cart-item-cover-placeholder">暂无图片</span>
+            </a>
+            <div class="cart-item-main">
+                <a class="cart-item-name" th:href="@{/user/market/{id}(id=${line.productId})}"
+                   th:text="${line.productName}">商品名称</a>
+                <p class="cart-item-price">单价：¥ <span th:text="${#numbers.formatDecimal(line.unitPrice,1,2)}">0.00</span></p>
+                <p class="cart-item-subtotal">小计：¥ <strong th:text="${#numbers.formatDecimal(line.lineSubtotal,1,2)}">0.00</strong></p>
+                <p class="cart-item-stock">库存：<span th:text="${line.stock}">0</span></p>
+                <div class="cart-item-actions">
+                    <form th:action="@{/user/cart/update}" method="post" class="inline cart-item-update-form">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <input type="hidden" name="cartItemId" th:value="${line.cartItemId}"/>
+                        <label class="cart-item-qty-label">
+                            <span>数量</span>
+                            <input class="market-qty" type="number" name="quantity" min="1"
+                                   th:max="${line.stock}" th:value="${line.quantity}"/>
+                        </label>
+                        <button type="submit" class="cart-action-btn cart-item-update-btn">更新数量</button>
+                    </form>
+                    <form th:action="@{/user/cart/remove}" method="post" class="inline"
+                          onsubmit="return confirm('从购物车移除该商品？');">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <input type="hidden" name="cartItemId" th:value="${line.cartItemId}"/>
+                        <button type="submit" class="cart-action-btn cart-item-remove-btn">移除商品</button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        <div class="cart-summary">
+            <p>合计：<strong>¥ <span th:text="${#numbers.formatDecimal(cartTotal,1,2)}">0</span></strong></p>
+            <a class="btn primary cart-checkout-btn" th:href="@{/user/checkout}">去结算</a>
+        </div>
+    </section>
+</main>
+<script>
+    (function () {
+        var alerts = document.querySelectorAll('.js-flash-alert');
+        if (!alerts || alerts.length === 0) {
+            return;
+        }
+        Array.prototype.forEach.call(alerts, function (el) {
+            var message = (el.textContent || '').trim();
+            if (message) {
+                window.alert(message);
+            }
+            if (el.parentNode) {
+                el.parentNode.removeChild(el);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

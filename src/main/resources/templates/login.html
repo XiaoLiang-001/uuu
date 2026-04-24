@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>登录 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body class="login-agri">
+<div class="login-agri-bg" aria-hidden="true"></div>
+<div class="login-agri-wrap">
+    <header class="login-agri-brand">
+        <span class="login-agri-logo" aria-hidden="true">🌾</span>
+        <div class="login-agri-titles">
+            <h1>农家优品</h1>
+            <p class="login-agri-tagline">产地直供 · 新鲜到家</p>
+        </div>
+    </header>
+
+    <div class="login-agri-card">
+        <h2 class="login-agri-card-title">欢迎登录</h2>
+        <p class="login-agri-hint">请使用已注册账号登录系统</p>
+
+        <p th:if="${param.registered != null}" class="login-agri-alert login-agri-alert--ok" role="status">注册成功，请登录</p>
+        <p th:if="${param.profileUpdated != null}" class="login-agri-alert login-agri-alert--ok" role="status">个人信息已更新，请重新登录</p>
+        <p th:if="${param.logout != null}" class="login-agri-alert login-agri-alert--ok" role="status">已安全退出</p>
+        <p th:if="${param.error != null}" class="login-agri-alert login-agri-alert--error" role="alert">用户名或密码错误</p>
+        <p th:if="${param.disabled != null}" class="login-agri-alert login-agri-alert--error" role="alert">该账号已被禁用，无法登录。如需使用请联系管理员处理。</p>
+
+        <form class="login-agri-form" th:action="@{/login}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <label class="login-agri-label" for="login-username">
+                <span class="login-agri-label-text">账号</span>
+                <input id="login-username" class="login-agri-input" type="text" name="username"
+                       autocomplete="username"
+                       placeholder="用户名 / 手机号" required autofocus/>
+            </label>
+            <label class="login-agri-label" for="login-password">
+                <span class="login-agri-label-text">密码</span>
+                <input id="login-password" class="login-agri-input" type="password" name="password"
+                       autocomplete="current-password"
+                       placeholder="请输入密码" required/>
+            </label>
+            <button type="submit" class="login-agri-submit">进入系统</button>
+        </form>
+
+        <p class="login-agri-footer">
+            还没有账号？<a class="login-agri-link" th:href="@{/register}">立即注册</a>
+        </p>
+    </div>
+
+    <p class="login-agri-copy">绿色 · 健康 · 可追溯</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: ncp
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  # MySQL（请先在库中执行 sql/schema-mysql.sql 建库建表）；连接池使用 Hikari
+  datasource:
+    url: jdbc:mysql://localhost:3307/ncp?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectTimeout=30000&socketTimeout=60000&tcpKeepAlive=true
+    username: root
+    password: "147258369"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 16
+      connection-timeout: 8000
+      validation-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+
+# MyBatis：持久层接口在 com.itheima.ncp.mapper
+mybatis:
+  type-aliases-package: com.itheima.ncp.entity,com.itheima.ncp.entity.user,com.itheima.ncp.entity.product,com.itheima.ncp.entity.shop
+  type-handlers-package: com.itheima.ncp.type
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+
+# 农产品图片本地存储目录（相对运行目录；可改为绝对路径）
+app:
+  upload:
+    dir: uploads

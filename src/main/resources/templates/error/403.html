@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>无权访问</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<main class="content" style="max-width:32rem;margin:3rem auto;">
+    <h1>403 · 无权访问</h1>
+    <p class="muted">当前账号没有权限打开该页面（例如普通用户不能进入管理后台）。</p>
+    <p>
+        <a th:href="@{/user/market}">去农产品集市</a>
+        <span class="muted"> · </span>
+        <a th:href="@{/user/home}">用户中心</a>
+    </p>
+    <p class="muted" style="font-size:0.9rem;">需进入后台请使用管理员账号登录后，从管理后台入口进入。</p>
+</main>
+</body>
+</html>
