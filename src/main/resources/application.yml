@@ -21,7 +21,7 @@ spring:
       connection-test-query: SELECT 1
 
 # MyBatis：持久层接口在 com.itheima.ncp.mapper
-mybatis:
+mybatis-plus:
   type-aliases-package: com.itheima.ncp.entity,com.itheima.ncp.entity.user,com.itheima.ncp.entity.product,com.itheima.ncp.entity.shop
   type-handlers-package: com.itheima.ncp.type
   mapper-locations: classpath:mapper/*.xml

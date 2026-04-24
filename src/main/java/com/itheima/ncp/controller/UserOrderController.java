@@ -20,6 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 用户订单控制器，覆盖结算、下单、订单列表与订单详情流程。
+ */
 @Controller
 public class UserOrderController {
 
@@ -36,6 +39,9 @@ public class UserOrderController {
         this.productService = productService;
     }
 
+    /**
+     * 结算页：展示购物车明细与应付总额。
+     */
     @GetMapping("/user/checkout")
     public String checkout(Authentication auth, Model model) {
         long uid = requireUserId(auth);
@@ -47,6 +53,9 @@ public class UserOrderController {
         return "user/checkout";
     }
 
+    /**
+     * 提交订单，基于当前购物车创建订单并跳转详情页。
+     */
     @PostMapping("/user/orders")
     public String createOrder(
             @RequestParam("receiverName") String receiverName,
@@ -68,6 +77,9 @@ public class UserOrderController {
         }
     }
 
+    /**
+     * 订单列表页，聚合封面图与每单商品数量用于卡片展示。
+     */
     @GetMapping("/user/orders")
     public String orders(Authentication auth, Model model) {
         long uid = requireUserId(auth);
@@ -101,6 +113,9 @@ public class UserOrderController {
         return "user/orders";
     }
 
+    /**
+     * 订单详情页，加载订单基础信息、明细及每项商品封面。
+     */
     @GetMapping("/user/orders/{id:\\d+}")
     public String orderDetail(@PathVariable long id, Authentication auth, Model model, RedirectAttributes ra) {
         long uid = requireUserId(auth);
@@ -133,6 +148,9 @@ public class UserOrderController {
         return "user/order-detail";
     }
 
+    /**
+     * 解析当前登录用户 ID，不存在时抛出异常。
+     */
     private long requireUserId(Authentication auth) {
         return userService.requireUserId(auth);
     }

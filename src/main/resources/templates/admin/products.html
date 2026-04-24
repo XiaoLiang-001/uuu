@@ -357,25 +357,12 @@
                     <el-divider direction="vertical"></el-divider>
                     <span class="admin-products-header-product">农产品管理</span>
                 </div>
-                <div class="admin-products-header-right">
-                    <a th:href="@{/admin/home}" class="admin-products-nav-link el-button el-button--text">后台首页</a>
-                    <form th:action="@{/logout}" method="post" class="inline">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <el-button native-type="submit" type="success" plain size="small">退出</el-button>
-                    </form>
-                </div>
             </div>
         </el-header>
         <el-main class="admin-products-el-main">
             <div class="admin-products-main-inner">
                 <div class="admin-products-page-heading">
                     <div class="admin-products-page-heading-text">
-                        <el-breadcrumb separator-class="el-icon-arrow-right">
-                            <el-breadcrumb-item>
-                                <a th:href="@{/admin/home}">管理后台</a>
-                            </el-breadcrumb-item>
-                            <el-breadcrumb-item>农产品</el-breadcrumb-item>
-                        </el-breadcrumb>
                         <h2 class="admin-products-page-title">农产品列表</h2>
                     </div>
                     <div class="admin-products-heading-actions">
@@ -639,11 +626,15 @@
             },
             toggleStatus: function (row, status) {
                 var vm = this;
-                var body = 'status=' + encodeURIComponent(status);
-                axios.post(API_LIST + '/' + row.id + '/status', body, {
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                })
-                    .then(function () {
+                axios.patch(API_LIST + '/' + row.id + '/status', { status: status })
+                    .then(function (res) {
+                        var b = res.data
+                        if (!b || b.code !== 200) {
+                            return vm.$alert((b && b.message) || '操作失败', '操作失败', {
+                                type: 'error',
+                                confirmButtonText: '确定'
+                            })
+                        }
                         vm.load();
                         return vm.$alert(status === 'ON_SHELF' ? '商品已上架。' : '商品已下架。', '操作成功', {
                             type: 'success',

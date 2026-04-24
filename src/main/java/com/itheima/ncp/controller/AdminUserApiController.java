@@ -7,11 +7,13 @@ import com.itheima.ncp.dto.AdminUserRowDto;
 import com.itheima.ncp.dto.AdminUserStatusRequest;
 import com.itheima.ncp.dto.AdminUserUpdateRequest;
 import com.itheima.ncp.service.user.UserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * 管理端用户 REST API，提供列表、新增、状态更新与删除能力。
+ */
 @RestController
 @RequestMapping("/api/admin/users")
 public class AdminUserApiController {
@@ -32,12 +37,18 @@ public class AdminUserApiController {
         this.userService = userService;
     }
 
+    /**
+     * 按关键字查询管理端用户列表。
+     */
     @GetMapping
     public ResponseEntity<ApiResult<List<AdminUserRowDto>>> list(
             @RequestParam(value = "keyword", required = false) String keyword) {
         return ResponseEntity.ok(ApiResult.ok(userService.listForAdmin(keyword)));
     }
 
+    /**
+     * 根据用户 ID 查询单个用户详情。
+     */
     @GetMapping("/{id:\\d+}")
     public ResponseEntity<ApiResult<AdminUserRowDto>> getOne(@PathVariable Long id) {
         try {
@@ -48,22 +59,24 @@ public class AdminUserApiController {
         }
     }
 
-    @PostMapping
+    /**
+     * 新增普通用户账号。
+     */
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResult<Void>> create(
-            @RequestBody(required = false) AdminUserCreateRequest body,
-            @RequestParam(value = "username", required = false) String usernameParam,
-            @RequestParam(value = "password", required = false) String passwordParam,
-            @RequestParam(value = "role", required = false) String roleParam,
-            @RequestParam(value = "status", required = false) Integer statusParam,
+            @RequestBody AdminUserCreateRequest body,
             @AuthenticationPrincipal UserDetails principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(ApiResult.fail(401, "未登录"));
         }
         try {
-            String username = firstNonBlank(body == null ? null : body.getUsername(), usernameParam);
-            String password = firstNonBlank(body == null ? null : body.getPassword(), passwordParam);
-            String roleRaw = firstNonBlank(body == null ? null : body.getRole(), roleParam);
-            Integer statusRaw = firstNonNull(body == null ? null : body.getStatus(), statusParam);
+            if (body == null) {
+                return ResponseEntity.badRequest().body(ApiResult.fail(400, "请求体无效"));
+            }
+            String username = body.getUsername();
+            String password = body.getPassword();
+            String roleRaw = body.getRole();
+            Integer statusRaw = body.getStatus();
             UserRole role = parseRole(roleRaw, UserRole.USER);
             int st = statusRaw != null ? statusRaw : 1;
             userService.createByAdmin(username, password, role, st, principal.getUsername());
@@ -79,23 +92,22 @@ public class AdminUserApiController {
     /**
      * 保存编辑：与前端使用 JSON 体（application/json），避免 iframe+form-urlencoded 下 @RequestParam 不绑定问题。
      */
-    @PostMapping(value = "/{id:\\d+}")
+    @PatchMapping(value = "/{id:\\d+}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResult<Void>> update(
             @PathVariable Long id,
-            @RequestBody(required = false) AdminUserUpdateRequest body,
-            @RequestParam(value = "username", required = false) String usernameParam,
-            @RequestParam(value = "password", required = false) String passwordParam,
-            @RequestParam(value = "oldPassword", required = false) String oldPasswordParam,
-            @RequestParam(value = "status", required = false) Integer statusParam,
+            @RequestBody AdminUserUpdateRequest body,
             @AuthenticationPrincipal UserDetails principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(ApiResult.fail(401, "未登录"));
         }
         try {
-            String username = firstNonBlank(body == null ? null : body.getUsername(), usernameParam);
-            String password = firstNonNull(body == null ? null : body.getPassword(), passwordParam);
-            String oldPassword = firstNonNull(body == null ? null : body.getOldPassword(), oldPasswordParam);
-            Integer statusRaw = firstNonNull(body == null ? null : body.getStatus(), statusParam);
+            if (body == null) {
+                return ResponseEntity.badRequest().body(ApiResult.fail(400, "请求体无效"));
+            }
+            String username = body.getUsername();
+            String password = body.getPassword();
+            String oldPassword = body.getOldPassword();
+            Integer statusRaw = body.getStatus();
             if (statusRaw == null) {
                 return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态不能为空"));
             }
@@ -109,6 +121,9 @@ public class AdminUserApiController {
         }
     }
 
+    /**
+     * 删除指定用户（不允许删除管理员及当前登录用户）。
+     */
     @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<ApiResult<Void>> delete(
             @PathVariable Long id,
@@ -127,17 +142,22 @@ public class AdminUserApiController {
         }
     }
 
-    @PostMapping(value = "/{id:\\d+}/status")
+    /**
+     * 修改用户启用/禁用状态。
+     */
+    @PatchMapping(value = "/{id:\\d+}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResult<Void>> updateStatus(
             @PathVariable Long id,
-            @RequestBody(required = false) AdminUserStatusRequest body,
-            @RequestParam(value = "status", required = false) Integer statusParam,
+            @RequestBody AdminUserStatusRequest body,
             @AuthenticationPrincipal UserDetails principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(ApiResult.fail(401, "未登录"));
         }
         try {
-            Integer statusRaw = firstNonNull(body == null ? null : body.getStatus(), statusParam);
+            if (body == null) {
+                return ResponseEntity.badRequest().body(ApiResult.fail(400, "请求体无效"));
+            }
+            Integer statusRaw = body.getStatus();
             if (statusRaw == null) {
                 return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态不能为空"));
             }
@@ -151,17 +171,9 @@ public class AdminUserApiController {
         }
     }
 
-    private static String firstNonBlank(String primary, String fallback) {
-        if (primary != null && !primary.trim().isEmpty()) {
-            return primary;
-        }
-        return fallback;
-    }
-
-    private static <T> T firstNonNull(T primary, T fallback) {
-        return primary != null ? primary : fallback;
-    }
-
+    /**
+     * 统一拼装 500 错误响应，附带后端异常信息便于排障。
+     */
     private ResponseEntity<ApiResult<Void>> internalError(String action, Exception e) {
         String detail = e == null ? null : e.getMessage();
         String msg = action + "，服务器内部错误";
@@ -171,6 +183,9 @@ public class AdminUserApiController {
         return ResponseEntity.status(500).body(ApiResult.fail(500, msg));
     }
 
+    /**
+     * 将字符串角色值解析为枚举，支持空值回退默认角色。
+     */
     private static UserRole parseRole(String roleStr, UserRole defaultIfBlank) {
         if (roleStr == null || roleStr.trim().isEmpty()) {
             if (defaultIfBlank != null) {

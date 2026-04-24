@@ -107,8 +107,17 @@
             overflow: hidden;
         }
         .admin-users-page-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
             margin-bottom: 8px;
             flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .admin-users-heading-actions {
+            flex-shrink: 0;
+            margin-bottom: 2px;
         }
         .admin-users-page-heading .el-breadcrumb {
             font-size: 12px;
@@ -271,9 +280,21 @@
             flex-shrink: 0;
             margin-bottom: 8px;
             display: flex;
-            align-items: center;
             gap: 8px;
             flex-wrap: wrap;
+            align-items: center;
+            position: relative;
+            padding-right: 176px;
+        }
+        .admin-users-toolbar-create {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 168px;
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
         }
         .admin-users-search-input {
             width: 230px;
@@ -325,30 +346,17 @@
                     <el-divider direction="vertical"></el-divider>
                     <span class="admin-users-header-title">用户管理</span>
                 </div>
-                <div class="admin-users-header-right">
-                    <a th:href="@{/admin/home}" class="admin-users-nav-link el-button el-button--text">后台首页</a>
-                    <form th:action="@{/logout}" method="post" class="inline">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <el-button native-type="submit" type="success" plain size="small">退出</el-button>
-                    </form>
-                </div>
             </div>
         </el-header>
         <el-main class="admin-users-el-main">
             <div class="admin-users-main-inner">
                 <div class="admin-users-page-heading">
-                    <el-breadcrumb separator-class="el-icon-arrow-right">
-                        <el-breadcrumb-item>
-                            <a th:href="@{/admin/home}">管理后台</a>
-                        </el-breadcrumb-item>
-                        <el-breadcrumb-item>用户管理</el-breadcrumb-item>
-                    </el-breadcrumb>
                     <h2 class="admin-users-page-title">用户列表</h2>
                 </div>
 
                 <el-alert
                         class="admin-users-tip-alert"
-                        title="新增仅限普通用户（不可在此新增管理员）；编辑不可变更身份，可改账号、状态；修改新密码须填写该用户原密码。删除与启停仅适用于「普通用户」；管理员账号仅可浏览。"
+                        title="新增仅限普通用户（不可在此新增管理员）。删除与启停仅适用于「普通用户」；管理员账号仅可浏览。"
                         type="success"
                         :closable="false"
                         show-icon>
@@ -357,7 +365,6 @@
                 <el-card class="admin-users-card" shadow="hover" :body-style="{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px' }">
                     <div class="admin-users-table-shell">
                         <div class="admin-users-toolbar">
-                            <el-button type="primary" size="small" icon="el-icon-plus" @click="openCreate">新增用户</el-button>
                             <el-input
                                     v-model.trim="keyword"
                                     clearable
@@ -370,6 +377,7 @@
                             </el-input>
                             <el-button type="success" size="small" icon="el-icon-search" @click="search">查询</el-button>
                             <el-button size="small" @click="resetFilters">重置</el-button>
+                            <el-button class="admin-users-toolbar-create" type="primary" size="small" icon="el-icon-plus" @click="openCreate">新增用户</el-button>
                         </div>
                         <el-table
                                 :data="pagedRows"
@@ -407,7 +415,6 @@
                             <el-table-column label="管理" width="168" align="center" fixed="right">
                                 <template slot-scope="scope">
                                     <template v-if="isOrdinaryUser(scope.row)">
-                                        <el-button type="text" size="mini" @click="openEdit(scope.row)">编辑</el-button>
                                         <el-button type="text" size="mini" style="color:#c45656;"
                                                    :disabled="isSelf(scope.row)"
                                                    @click="confirmDelete(scope.row)">删除</el-button>
@@ -437,33 +444,24 @@
     </el-container>
 
     <el-dialog
-            :title="dialogMode === 'create' ? '新增用户' : '编辑用户'"
+            title="新增用户"
             :visible.sync="dialogVisible"
             width="480px"
             custom-class="admin-users-dialog"
             :close-on-click-modal="false"
             @closed="onDialogClosed">
-        <div v-if="editDialogLoading" style="text-align:center;padding:24px;color:#909399;">加载中…</div>
-        <el-form v-show="!editDialogLoading || dialogMode === 'create'" ref="userForm" class="admin-users-dialog-form"
+        <el-form ref="userForm" class="admin-users-dialog-form"
                  :model="form" label-position="top" size="small" @submit.native.prevent="submitDialog">
             <el-form-item label="登录账号" required>
                 <el-input v-model="form.username" maxlength="64" placeholder="2～64 字符，中文/字母/数字/下划线" clearable></el-input>
             </el-form-item>
-            <el-form-item :label="dialogMode === 'create' ? '密码' : '新密码'" :required="dialogMode === 'create'">
+            <el-form-item label="密码" required>
                 <el-input v-model="form.password" type="password" show-password
-                          :placeholder="dialogMode === 'create' ? '3～128 字符' : '留空则不修改密码'"
+                          placeholder="3～128 字符"
                           maxlength="128" clearable></el-input>
             </el-form-item>
-            <el-form-item v-if="dialogMode === 'edit'" label="原密码">
-                <el-input v-model="form.oldPassword" type="password" show-password
-                          placeholder="填写新密码时必填，须与该用户当前密码一致"
-                          maxlength="128" clearable autocomplete="off"></el-input>
-            </el-form-item>
-            <el-form-item v-if="dialogMode === 'create'" label="角色">
+            <el-form-item label="角色">
                 <span class="admin-users-role-readonly">普通用户（本页仅支持新增普通用户）</span>
-            </el-form-item>
-            <el-form-item v-else label="角色">
-                <span class="admin-users-role-readonly">{{ roleLabel(form.role) }}（创建后不可修改身份）</span>
             </el-form-item>
             <el-form-item label="状态">
                 <el-switch v-model="form.status" :active-value="1" :inactive-value="0"
@@ -472,7 +470,7 @@
         </el-form>
         <span slot="footer" class="dialog-footer">
             <el-button @click="dialogVisible = false" size="small">取 消</el-button>
-            <el-button type="primary" size="small" :loading="dialogSubmitting" :disabled="editDialogLoading"
+            <el-button type="primary" size="small" :loading="dialogSubmitting"
                        @click="submitDialog">确 定</el-button>
         </span>
     </el-dialog>
@@ -515,14 +513,11 @@
                 tableHeight: calcTableHeight(),
                 currentUsername: CURRENT_USER || '',
                 dialogVisible: false,
-                dialogMode: 'create',
                 dialogSubmitting: false,
-                editDialogLoading: false,
                 form: {
                     id: null,
                     username: '',
                     password: '',
-                    oldPassword: '',
                     role: 'USER',
                     status: 1
                 }
@@ -612,7 +607,7 @@
             },
             setStatus: function (row, st) {
                 var vm = this;
-                axios.post(API + '/' + row.id + '/status', { status: st })
+                axios.patch(API + '/' + row.id + '/status', { status: st })
                     .then(function (res) {
                         var b = res.data
                         if (!b || b.code !== 200) {
@@ -633,112 +628,46 @@
                     id: null,
                     username: '',
                     password: '',
-                    oldPassword: '',
                     role: 'USER',
                     status: 1
                 };
             },
             openCreate: function () {
-                this.dialogMode = 'create';
-                this.editDialogLoading = false;
                 this.resetForm();
                 this.dialogVisible = true;
             },
-            openEdit: function (row) {
-                var vm = this;
-                if (!vm.isOrdinaryUser(row)) return;
-                vm.dialogMode = 'edit';
-                vm.editDialogLoading = true;
-                vm.dialogVisible = true;
-                axios.get(API + '/' + row.id)
-                    .then(function (res) {
-                        var b = res.data
-                        if (!b || b.code !== 200) {
-                            return vm.$alert((b && b.message) || '加载用户失败', '错误', { type: 'error', confirmButtonText: '确定' })
-                        }
-                        var d = b.data && typeof b.data === 'object' ? b.data : {}
-                        vm.form = {
-                            id: d.id,
-                            username: d.username || '',
-                            password: '',
-                            oldPassword: '',
-                            role: d.role || 'USER',
-                            status: d.status === 1 ? 1 : 0
-                        };
-                    })
-                    .catch(function (e) {
-                        vm.dialogVisible = false;
-                        vm.showErr(e, '加载用户失败');
-                    })
-                    .finally(function () {
-                        vm.editDialogLoading = false;
-                    });
-            },
             onDialogClosed: function () {
                 this.dialogSubmitting = false;
-                this.editDialogLoading = false;
                 this.resetForm();
             },
             submitDialog: function () {
                 var vm = this;
-                if (vm.editDialogLoading) {
-                    return;
-                }
                 var u = (vm.form.username || '').trim();
                 var p = vm.form.password || '';
                 if (u.length < 2) {
                     vm.$message.warning('请填写有效的登录账号。');
                     return;
                 }
-                if (vm.dialogMode === 'create' && (!p || p.length < 3)) {
+                if (!p || p.length < 3) {
                     vm.$message.warning('请填写密码（至少 3 个字符）。');
                     return;
                 }
-                if (vm.dialogMode === 'edit' && p.length > 0) {
-                    var oldP = (vm.form.oldPassword || '').trim();
-                    if (!oldP) {
-                        vm.$message.warning('修改密码时请填写该用户的原密码。');
-                        return;
-                    }
-                }
                 vm.dialogSubmitting = true;
-                if (vm.dialogMode === 'create') {
-                    var cPayload = { username: u, password: p, role: 'USER', status: vm.form.status };
-                    axios.post(API, cPayload)
-                        .then(function (res) {
-                            var b = res.data
-                            if (!b || b.code !== 200) {
-                                return vm.$alert((b && b.message) || '创建失败', '错误', { type: 'error', confirmButtonText: '确定' })
-                            }
-                            vm.dialogVisible = false;
-                            vm.load();
-                            vm.$message.success('用户已创建。');
-                        })
-                        .catch(function (e) {
-                            vm.showErr(e, '创建失败');
-                        })
-                        .finally(function () { vm.dialogSubmitting = false; });
-                } else {
-                    var ePayload = { username: u, status: vm.form.status };
-                    if (p.length > 0) {
-                        ePayload.password = p;
-                        ePayload.oldPassword = (vm.form.oldPassword || '').trim();
-                    }
-                    axios.post(API + '/' + vm.form.id, ePayload)
-                        .then(function (res) {
-                            var b = res.data
-                            if (!b || b.code !== 200) {
-                                return vm.$alert((b && b.message) || '保存失败', '错误', { type: 'error', confirmButtonText: '确定' })
-                            }
-                            vm.dialogVisible = false;
-                            vm.load();
-                            vm.$message.success('已保存修改。');
-                        })
-                        .catch(function (e) {
-                            vm.showErr(e, '保存失败');
-                        })
-                        .finally(function () { vm.dialogSubmitting = false; });
-                }
+                var cPayload = { username: u, password: p, role: 'USER', status: vm.form.status };
+                axios.post(API, cPayload)
+                    .then(function (res) {
+                        var b = res.data
+                        if (!b || b.code !== 200) {
+                            return vm.$alert((b && b.message) || '创建失败', '错误', { type: 'error', confirmButtonText: '确定' })
+                        }
+                        vm.dialogVisible = false;
+                        vm.load();
+                        vm.$message.success('用户已创建。');
+                    })
+                    .catch(function (e) {
+                        vm.showErr(e, '创建失败');
+                    })
+                    .finally(function () { vm.dialogSubmitting = false; });
             },
             showErr: function (e, title) {
                 var m = title || '请求失败'

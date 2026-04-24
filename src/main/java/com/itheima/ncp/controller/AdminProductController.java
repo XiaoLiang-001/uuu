@@ -19,6 +19,9 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * 管理端商品页面控制器，处理商品新增、编辑表单提交与页面跳转。
+ */
 @Controller
 public class AdminProductController {
 
@@ -28,16 +31,25 @@ public class AdminProductController {
         this.productService = productService;
     }
 
+    /**
+     * 打开商品管理列表页。
+     */
     @GetMapping("/admin/products")
     public String list() {
         return "admin/products";
     }
 
+    /**
+     * 打开新增商品表单页。
+     */
     @GetMapping("/admin/products/new")
     public String newForm() {
         return "admin/product-form";
     }
 
+    /**
+     * 处理新增商品表单提交，校验关键字段后写入商品与图片信息。
+     */
     @PostMapping(value = "/admin/products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String create(
             @AuthenticationPrincipal UserDetails principal,
@@ -65,6 +77,9 @@ public class AdminProductController {
         return "redirect:/admin/products";
     }
 
+    /**
+     * 打开商品编辑页，并加载商品详情及图片列表。
+     */
     @GetMapping("/admin/products/{id:\\d+}")
     public String editForm(@PathVariable long id, Model model, RedirectAttributes ra) {
         Product p = productService.getById(id);
@@ -77,6 +92,9 @@ public class AdminProductController {
         return "admin/product-detail";
     }
 
+    /**
+     * 处理商品编辑保存，支持新增图片和删除指定历史图片。
+     */
     @PostMapping(value = "/admin/products/{id:\\d+}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String update(
             @PathVariable long id,

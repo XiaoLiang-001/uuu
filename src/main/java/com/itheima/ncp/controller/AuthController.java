@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+/**
+ * 认证页面控制器，处理注册页展示与注册表单提交。
+ */
 @Controller
 public class AuthController {
     private static final String USERNAME_REGEX = "^[\\u4e00-\\u9fa5A-Za-z0-9_]+$";
@@ -21,6 +24,9 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * 打开注册页；若已登录则直接回首页。
+     */
     @GetMapping("/register")
     public String registerPage(Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()
@@ -30,6 +36,9 @@ public class AuthController {
         return "register";
     }
 
+    /**
+     * 处理注册请求，完成用户名与密码校验后创建普通用户。
+     */
     @PostMapping("/register")
     public String register(@RequestParam("username") String username,
                            @RequestParam("password") String password,

@@ -36,6 +36,9 @@ public class AuthApiController {
         this.authenticationManager = authenticationManager;
     }
 
+    /**
+     * JSON 登录接口：认证成功后写入 Session SecurityContext 并返回当前账号信息。
+     */
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ApiResult<Map<String, Object>> login(@RequestBody LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
         if (req == null || req.getUsername() == null || req.getUsername().trim().isEmpty()) {

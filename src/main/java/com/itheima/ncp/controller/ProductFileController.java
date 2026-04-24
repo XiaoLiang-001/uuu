@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+/**
+ * 商品文件访问控制器，按受控白名单方式返回商品图片资源。
+ */
 @Controller
 public class ProductFileController {
 

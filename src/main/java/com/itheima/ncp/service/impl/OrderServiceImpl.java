@@ -20,6 +20,9 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * 订单服务实现，负责结算下单、订单明细写入与订单查询。
+ */
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -39,6 +42,9 @@ public class OrderServiceImpl implements OrderService {
         this.cartService = cartService;
     }
 
+    /**
+     * 从购物车创建订单：校验库存后写入主订单与明细，并清空购物车。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long createOrderFromCart(Long userId, String receiverName, String receiverPhone, String receiverAddress) {
@@ -110,20 +116,32 @@ public class OrderServiceImpl implements OrderService {
         return orderId;
     }
 
+    /**
+     * 生成订单号（时间戳 + 随机数）。
+     */
     private static String buildOrderNo() {
         return "O" + System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(10000, 99999);
     }
 
+    /**
+     * 查询用户可见的单个订单。
+     */
     @Override
     public ShopOrder getOrderForUser(Long orderId, Long userId) {
         return shopOrderMapper.findByIdAndUserId(orderId, userId);
     }
 
+    /**
+     * 按时间倒序查询用户订单列表。
+     */
     @Override
     public List<ShopOrder> listOrders(Long userId) {
         return shopOrderMapper.findByUserIdOrderByIdDesc(userId);
     }
 
+    /**
+     * 查询订单对应的所有商品明细。
+     */
     @Override
     public List<OrderItem> listOrderItems(Long orderId) {
         return orderItemMapper.findByOrderId(orderId);

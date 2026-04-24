@@ -20,6 +20,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * 通用页面路由控制器，承载登录首页、角色分发与账户相关页面跳转。
+ */
 @Controller
 public class PageController {
 
@@ -47,6 +50,9 @@ public class PageController {
     }
 
     @GetMapping("/")
+    /**
+     * 根路径入口：根据当前登录角色分发到管理端或用户端首页。
+     */
     public String index(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
@@ -60,6 +66,9 @@ public class PageController {
         return "redirect:/user/home";
     }
 
+    /**
+     * 打开登录页；已登录用户直接回根路径。
+     */
     @GetMapping("/login")
     public String login(Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()
@@ -69,24 +78,36 @@ public class PageController {
         return "login";
     }
 
+    /**
+     * 用户端壳页面入口，附带当前用户资料摘要。
+     */
     @GetMapping("/user/home")
     public String userHome(Authentication authentication, Model model) {
         bindUserProfile(authentication, model);
         return "user/home";
     }
 
+    /**
+     * 用户资料展示页。
+     */
     @GetMapping("/user/profile")
     public String userProfile(Authentication authentication, Model model) {
         bindUserProfile(authentication, model);
         return "user/profile";
     }
 
+    /**
+     * 用户资料编辑页。
+     */
     @GetMapping("/user/profile/edit")
     public String editUserProfile(Authentication authentication, Model model) {
         bindUserProfile(authentication, model);
         return "user/profile-edit";
     }
 
+    /**
+     * 提交个人资料修改；修改成功后主动登出并要求重新登录。
+     */
     @PostMapping("/user/profile/update")
     public String updateMyProfile(@RequestParam("username") String username,
                                   @RequestParam("oldPassword") String oldPassword,
@@ -117,6 +138,9 @@ public class PageController {
         }
     }
 
+    /**
+     * 将当前用户资料与状态标签写入页面模型，供前端模板渲染。
+     */
     private void bindUserProfile(Authentication authentication, Model model) {
         String username = authentication != null ? authentication.getName() : "";
         User u = userService.getByUsername(username);
@@ -162,6 +186,9 @@ public class PageController {
         }
     }
 
+    /**
+     * 打开管理端壳页面。
+     */
     @GetMapping("/admin/home")
     public String adminHome() {
         return "admin/home";

@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/**
+ * 用户购物车控制器，处理购物车展示与增删改数量操作。
+ */
 @Controller
 public class UserCartController {
 
@@ -21,6 +24,9 @@ public class UserCartController {
         this.userService = userService;
     }
 
+    /**
+     * 展示当前登录用户购物车内容与总金额。
+     */
     @GetMapping("/user/cart")
     public String cart(Authentication auth, Model model) {
         long uid = requireUserId(auth);
@@ -29,6 +35,9 @@ public class UserCartController {
         return "user/cart";
     }
 
+    /**
+     * 向购物车新增商品。
+     */
     @PostMapping("/user/cart/add")
     public String add(@RequestParam("productId") long productId,
                      @RequestParam("quantity") int quantity,
@@ -44,6 +53,9 @@ public class UserCartController {
         return "redirect:/user/cart";
     }
 
+    /**
+     * 更新购物车单项数量。
+     */
     @PostMapping("/user/cart/update")
     public String update(@RequestParam("cartItemId") long cartItemId,
                         @RequestParam("quantity") int quantity,
@@ -59,6 +71,9 @@ public class UserCartController {
         return "redirect:/user/cart";
     }
 
+    /**
+     * 从购物车删除指定条目。
+     */
     @PostMapping("/user/cart/remove")
     public String remove(@RequestParam("cartItemId") long cartItemId,
                         Authentication auth,
@@ -73,6 +88,9 @@ public class UserCartController {
         return "redirect:/user/cart";
     }
 
+    /**
+     * 解析当前登录用户 ID，不存在时抛出业务异常。
+     */
     private long requireUserId(Authentication auth) {
         return userService.requireUserId(auth);
     }

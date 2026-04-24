@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 购物车服务实现，封装购物车条目查询、金额计算与增删改逻辑。
+ */
 @Service
 public class CartServiceImpl implements CartService {
 
@@ -27,6 +30,9 @@ public class CartServiceImpl implements CartService {
         this.productMapper = productMapper;
     }
 
+    /**
+     * 查询用户购物车并按商品实时状态组装展示行数据。
+     */
     @Override
     public List<CartLineDto> listLines(Long userId) {
         List<CartItem> rows = cartItemMapper.findByUserId(userId);
@@ -62,6 +68,9 @@ public class CartServiceImpl implements CartService {
         return out;
     }
 
+    /**
+     * 从商品图片 CSV 中提取第一张图片文件名。
+     */
     private static String firstImageName(String imagesCsv) {
         if (imagesCsv == null) {
             return null;
@@ -80,6 +89,9 @@ public class CartServiceImpl implements CartService {
         return null;
     }
 
+    /**
+     * 统计购物车总价。
+     */
     @Override
     public BigDecimal sumCartTotal(Long userId) {
         BigDecimal sum = BigDecimal.ZERO;
@@ -89,6 +101,9 @@ public class CartServiceImpl implements CartService {
         return sum.setScale(2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * 向购物车新增商品，存在同商品时累加数量并受库存约束。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addProduct(Long userId, long productId, int quantity) {
@@ -122,6 +137,9 @@ public class CartServiceImpl implements CartService {
         }
     }
 
+    /**
+     * 更新购物车某条目的购买数量。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateQuantity(Long userId, long cartItemId, int quantity) {
@@ -152,6 +170,9 @@ public class CartServiceImpl implements CartService {
         cartItemMapper.updateQuantity(cartItemId, q);
     }
 
+    /**
+     * 删除购物车指定条目。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removeLine(Long userId, long cartItemId) {
@@ -161,6 +182,9 @@ public class CartServiceImpl implements CartService {
         }
     }
 
+    /**
+     * 清空指定用户购物车。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void clearCart(Long userId) {

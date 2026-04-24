@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * 商品评价服务实现，校验评价资格并维护评价数据。
+ */
 @Service
 public class ProductReviewServiceImpl implements ProductReviewService {
 
@@ -26,6 +29,9 @@ public class ProductReviewServiceImpl implements ProductReviewService {
         this.orderItemMapper = orderItemMapper;
     }
 
+    /**
+     * 判断用户是否购买过该商品，从而是否具备评价资格。
+     */
     @Override
     public boolean canUserReview(Long userId, long productId) {
         if (userId == null) {
@@ -34,11 +40,17 @@ public class ProductReviewServiceImpl implements ProductReviewService {
         return orderItemMapper.countByUserIdAndProductId(userId, productId) > 0;
     }
 
+    /**
+     * 查询商品评价列表（按创建时间倒序）。
+     */
     @Override
     public List<ProductReview> listByProductId(Long productId) {
         return productReviewMapper.findByProductIdOrderByCreatedAtDesc(productId);
     }
 
+    /**
+     * 新增商品评价，包含商品状态、内容、评分与购买记录校验。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addReview(long productId, Long userId, String loginUsername, String content, Integer rating) {

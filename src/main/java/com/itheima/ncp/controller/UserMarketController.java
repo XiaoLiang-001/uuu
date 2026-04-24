@@ -20,6 +20,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 用户端商城控制器，负责商品列表、详情页展示以及分页参数准备。
+ */
 @Controller
 public class UserMarketController {
 
@@ -37,6 +40,9 @@ public class UserMarketController {
         this.userService = userService;
     }
 
+    /**
+     * 商城列表页，按分页参数查询在售商品并构建分页模型。
+     */
     @GetMapping("/user/market")
     public String list(@RequestParam(value = "page", defaultValue = "1") int page,
                       @RequestParam(value = "size", defaultValue = "12") int size,
@@ -75,6 +81,9 @@ public class UserMarketController {
         return "user/market";
     }
 
+    /**
+     * 商品详情页，包含图片与评价信息，并判断当前用户是否可评价。
+     */
     @GetMapping("/user/market/{id:\\d+}")
     public String detail(@PathVariable long id, Authentication authentication, Model model,
                         RedirectAttributes ra) {

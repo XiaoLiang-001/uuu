@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 商品服务实现，统一处理商品查询、保存、上下架及图片关联校验。
+ */
 @Service
 public class ProductServiceImpl implements ProductService {
 
@@ -34,11 +37,17 @@ public class ProductServiceImpl implements ProductService {
         this.fileStorageService = fileStorageService;
     }
 
+    /**
+     * 查询全部商品（管理视角）。
+     */
     @Override
     public List<Product> listAll() {
         return productMapper.findAllOrderByIdDesc();
     }
 
+    /**
+     * 管理端列表查询：按关键字和状态筛选商品。
+     */
     @Override
     public List<Product> listForAdmin(String keyword, ProductStatus status) {
         String kw = keyword == null ? "" : keyword.trim();
@@ -49,16 +58,25 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.findByKeywordAndStatusOrderByIdDesc(kw.isEmpty() ? null : kw, st);
     }
 
+    /**
+     * 查询全部上架商品。
+     */
     @Override
     public List<Product> listOnShelf() {
         return productMapper.findOnShelfOrderByIdDesc();
     }
 
+    /**
+     * 统计当前上架商品总数。
+     */
     @Override
     public int countOnShelf() {
         return productMapper.countOnShelf();
     }
 
+    /**
+     * 按分页参数查询上架商品。
+     */
     @Override
     public List<Product> listOnShelfPage(int offset, int limit) {
         if (limit <= 0) {
@@ -68,11 +86,17 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.findOnShelfOrderByIdDescPaged(o, limit);
     }
 
+    /**
+     * 根据主键查询商品。
+     */
     @Override
     public Product getById(Long id) {
         return productMapper.findById(id);
     }
 
+    /**
+     * 将商品图片字段按逗号拆分为文件名列表。
+     */
     @Override
     public List<String> splitStoredImageNames(Product p) {
         if (p == null || p.getImages() == null) {
@@ -92,6 +116,9 @@ public class ProductServiceImpl implements ProductService {
         return out;
     }
 
+    /**
+     * 批量提取商品首图映射（商品ID -> 首图文件名）。
+     */
     @Override
     public Map<Long, String> mapFirstImageStoredByProducts(List<Product> products) {
         Map<Long, String> map = new HashMap<Long, String>();
@@ -110,6 +137,9 @@ public class ProductServiceImpl implements ProductService {
         return map;
     }
 
+    /**
+     * 判断文件名是否已被任一商品引用。
+     */
     @Override
     public boolean isStoredImageRegistered(String storedName) {
         if (storedName == null || storedName.trim().isEmpty()) {
@@ -118,6 +148,9 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.countHavingStoredImage(storedName.trim()) > 0;
     }
 
+    /**
+     * 创建商品并保存上传图片。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void createProduct(String operatorUsername, String name, String description,
@@ -165,6 +198,9 @@ public class ProductServiceImpl implements ProductService {
         productMapper.insert(p);
     }
 
+    /**
+     * 更新商品上下架状态。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, ProductStatus newStatus) {
@@ -181,6 +217,9 @@ public class ProductServiceImpl implements ProductService {
         productMapper.updateStatusByRow(id, newStatus.name());
     }
 
+    /**
+     * 更新商品基础信息及图片增删。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateProduct(Long id, String name, String description, BigDecimal price, int stock,
@@ -260,6 +299,9 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    /**
+     * 删除商品及其未被其他商品引用的图片文件。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteProduct(Long id) {

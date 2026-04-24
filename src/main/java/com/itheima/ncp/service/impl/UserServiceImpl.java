@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 用户服务实现，承载注册、登录用户查询与管理端用户维护能力。
+ */
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -29,6 +32,9 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * 按用户名查询用户，自动处理空白输入。
+     */
     @Override
     public User getByUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
@@ -37,11 +43,17 @@ public class UserServiceImpl implements UserService {
         return userMapper.findByUsername(username.trim());
     }
 
+    /**
+     * 按主键查询用户。
+     */
     @Override
     public User getUserById(Long id) {
         return id == null ? null : userMapper.findById(id);
     }
 
+    /**
+     * 判断用户名是否已存在。
+     */
     @Override
     public boolean isUsernameExists(String username) {
         if (username == null || username.isEmpty()) {
@@ -50,6 +62,9 @@ public class UserServiceImpl implements UserService {
         return userMapper.countByUsernameTrim(username) > 0;
     }
 
+    /**
+     * 注册普通用户账号。
+     */
     @Override
     public void registerAsEndUser(String normalizedUsername, String encodedPassword) {
         User user = new User();
@@ -66,6 +81,9 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    /**
+     * 从认证对象解析当前用户 ID。
+     */
     @Override
     public long requireUserId(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
@@ -78,6 +96,9 @@ public class UserServiceImpl implements UserService {
         return u.getId();
     }
 
+    /**
+     * 查询管理端用户全量列表。
+     */
     @Override
     public List<AdminUserRowDto> listAllForAdmin() {
         return userMapper.findAllOrderByIdDesc().stream()
@@ -85,6 +106,9 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 按关键字查询管理端用户列表。
+     */
     @Override
     public List<AdminUserRowDto> listForAdmin(String keyword) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim();
@@ -93,6 +117,9 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 管理员修改用户启用状态。
+     */
     @Override
     public void updateStatusByAdmin(Long userId, int status, String operatorUsername) {
         if (status != User.STATUS_DISABLED && status != User.STATUS_ENABLED) {
@@ -122,12 +149,18 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    /**
+     * 查询管理端单个用户详情。
+     */
     @Override
     public AdminUserRowDto getByIdForAdmin(Long id) {
         User u = requireUser(id);
         return toRow(u);
     }
 
+    /**
+     * 管理员新增普通用户。
+     */
     @Override
     public void createByAdmin(String username, String rawPassword, UserRole role, int status, String operatorUsername) {
         requireOperator(operatorUsername);
@@ -156,6 +189,9 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    /**
+     * 管理员更新普通用户信息，可选修改密码。
+     */
     @Override
     public void updateByAdmin(Long userId, String username, String rawNewPasswordOrNullOrBlank,
                               String oldPasswordWhenChanging, int status, String operatorUsername) {
@@ -209,6 +245,9 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    /**
+     * 管理员删除普通用户。
+     */
     @Override
     public void deleteByAdmin(Long userId, String operatorUsername) {
         requireOperator(operatorUsername);
@@ -230,6 +269,9 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    /**
+     * 用户修改个人资料（用户名/密码）。
+     */
     @Override
     public void updateSelfProfile(String currentUsername, String newUsername,
                                  String oldPassword, String newPasswordOrBlank) {
@@ -276,6 +318,9 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    /**
+     * 校验操作者是否合法且存在。
+     */
     private void requireOperator(String operatorUsername) {
         String operator = operatorUsername == null ? "" : operatorUsername.trim();
         if (operator.isEmpty() || userMapper.countByUsernameTrim(operator) <= 0) {
@@ -283,6 +328,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 规范化并校验用户名格式。
+     */
     private static String normalizeAndValidateUsername(String username) {
         String normalized = username == null ? "" : username.trim();
         if (normalized.length() < 2 || normalized.length() > 64) {
@@ -294,12 +342,18 @@ public class UserServiceImpl implements UserService {
         return normalized;
     }
 
+    /**
+     * 校验原始密码长度。
+     */
     private static void validateRawPassword(String raw) {
         if (raw == null || raw.length() < 3 || raw.length() > 128) {
             throw new IllegalArgumentException("密码长度应为 3～128 个字符");
         }
     }
 
+    /**
+     * 执行写操作并在通信异常时自动重试一次。
+     */
     private void executeWriteWithRetry(String action, Runnable runnable) {
         try {
             runnable.run();
@@ -320,6 +374,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 判断异常链中是否包含数据库通信失败特征。
+     */
     private static boolean isCommunicationFailure(Throwable t) {
         Throwable cur = t;
         while (cur != null) {
@@ -336,6 +393,9 @@ public class UserServiceImpl implements UserService {
         return false;
     }
 
+    /**
+     * 查询并确保用户存在。
+     */
     private User requireUser(Long id) {
         User u = getUserById(id);
         if (u == null) {
@@ -344,6 +404,9 @@ public class UserServiceImpl implements UserService {
         return u;
     }
 
+    /**
+     * 用户实体转管理端列表 DTO。
+     */
     private AdminUserRowDto toRow(User u) {
         AdminUserRowDto d = new AdminUserRowDto();
         d.setId(u.getId());

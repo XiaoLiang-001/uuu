@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/**
+ * 用户评价控制器，处理商品评价提交并回写提示信息。
+ */
 @Controller
 public class UserReviewController {
 
@@ -20,6 +23,9 @@ public class UserReviewController {
         this.productReviewService = productReviewService;
     }
 
+    /**
+     * 提交商品评价并回跳详情页。
+     */
     @PostMapping("/user/reviews")
     public String add(@RequestParam("productId") long productId,
                      @RequestParam("content") String content,

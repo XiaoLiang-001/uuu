@@ -17,6 +17,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * 文件存储服务实现，负责商品图片目录初始化、命名与物理文件读写。
+ */
 @Service
 public class FileStorageServiceImpl implements FileStorageService {
 
@@ -29,6 +32,9 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     private Path productsDirectory;
 
+    /**
+     * 初始化商品上传目录。
+     */
     @PostConstruct
     public void init() throws IOException {
         Path root = Paths.get(uploadRoot).toAbsolutePath().normalize();
@@ -36,11 +42,17 @@ public class FileStorageServiceImpl implements FileStorageService {
         Files.createDirectories(productsDirectory);
     }
 
+    /**
+     * 返回商品图片根目录绝对路径。
+     */
     @Override
     public Path getProductsDirectory() {
         return productsDirectory;
     }
 
+    /**
+     * 检查上传文件是否为允许的图片类型。
+     */
     @Override
     public boolean isAllowedImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -54,6 +66,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         return ALLOWED_EXT.contains(ext);
     }
 
+    /**
+     * 保存商品图片并返回系统生成的存储文件名。
+     */
     @Override
     public String saveProductImage(MultipartFile file) throws IOException {
         if (!isAllowedImage(file)) {
@@ -69,6 +84,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         return stored;
     }
 
+    /**
+     * 安全解析存储文件路径，防止目录穿越。
+     */
     @Override
     public Path resolveStoredFile(String storedName) {
         if (storedName == null || storedName.contains("..") || storedName.contains("/") || storedName.contains("\\")) {
@@ -81,6 +99,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         return p;
     }
 
+    /**
+     * 提取文件扩展名并统一为小写。
+     */
     private static String extension(String original) {
         if (original == null || !original.contains(".")) {
             return "";
@@ -88,6 +109,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         return original.substring(original.lastIndexOf('.')).toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * 尝试删除文件，失败时静默忽略。
+     */
     @Override
     public void deleteStoredSilently(String storedName) {
         try {
