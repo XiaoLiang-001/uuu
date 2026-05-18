@@ -1,5 +1,10 @@
 package com.itheima.ncp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.itheima.ncp.config.cache.CacheNames;
+import com.itheima.ncp.dto.CategoryOptionDto;
+import com.itheima.ncp.dto.ProvinceOptionDto;
 import com.itheima.ncp.entity.product.Product;
 import com.itheima.ncp.entity.product.ProductStatus;
 import com.itheima.ncp.entity.user.User;
@@ -7,6 +12,9 @@ import com.itheima.ncp.mapper.product.ProductMapper;
 import com.itheima.ncp.service.product.FileStorageService;
 import com.itheima.ncp.service.product.ProductService;
 import com.itheima.ncp.service.user.UserService;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,11 +39,17 @@ public class ProductServiceImpl implements ProductService {
     private final ProductMapper productMapper;
     private final UserService userService;
     private final FileStorageService fileStorageService;
+    private final CacheManager cacheManager;
+    private final JdbcTemplate jdbcTemplate;
 
-    public ProductServiceImpl(ProductMapper productMapper, UserService userService, FileStorageService fileStorageService) {
+    public ProductServiceImpl(ProductMapper productMapper, UserService userService,
+                              FileStorageService fileStorageService, CacheManager cacheManager,
+                              JdbcTemplate jdbcTemplate) {
         this.productMapper = productMapper;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
+        this.cacheManager = cacheManager;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
@@ -47,26 +62,27 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
-     * 管理端列表查询：按关键字和状态筛选商品。
+     * 管理端列表查询：按关键字、状态、省份筛选商品。
      */
     @Override
-    public List<Product> listForAdmin(String keyword, ProductStatus status) {
+    public List<Product> listForAdmin(String keyword, ProductStatus status, Long provinceId, Long categoryId) {
         // 关键字空值统一转空串。
         String kw = keyword == null ? "" : keyword.trim();
         // 枚举状态转为数据库查询用字符串。
         String st = status == null ? null : status.name();
-        // 两个筛选都为空时走全量查询 SQL。
-        if (kw.isEmpty() && (st == null || st.isEmpty())) {
+        // 三个筛选都为空时走全量查询 SQL。
+        if (kw.isEmpty() && (st == null || st.isEmpty()) && provinceId == null && categoryId == null) {
             return productMapper.findAllOrderByIdDesc();
         }
         // 否则走条件查询 SQL。
-        return productMapper.findByKeywordAndStatusOrderByIdDesc(kw.isEmpty() ? null : kw, st);
+        return productMapper.findByKeywordAndStatusAndProvinceOrderByIdDesc(kw.isEmpty() ? null : kw, st, provinceId, categoryId);
     }
 
     /**
      * 查询全部上架商品。
      */
     @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_LIST, key = "'all'")
     public List<Product> listOnShelf() {
         // 用户侧仅展示在售商品。
         return productMapper.findOnShelfOrderByIdDesc();
@@ -76,15 +92,26 @@ public class ProductServiceImpl implements ProductService {
      * 统计当前上架商品总数。
      */
     @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_COUNT, key = "'c'")
     public int countOnShelf() {
-        // 分页总数统计。
-        return productMapper.countOnShelf();
+        // 分页总数统计（单表条件，与 countOnShelf 注解 SQL 等价）。
+        return Math.toIntExact(productMapper.selectCount(new QueryWrapper<Product>()
+                .eq("status", ProductStatus.ON_SHELF)));
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_COUNT,
+            key = "(#keyword == null ? '' : #keyword.trim()) + '-' + (#provinceId == null ? 'all' : #provinceId)")
+    public int countOnShelf(String keyword, Long provinceId, Long categoryId) {
+        String kw = keyword == null ? "" : keyword.trim();
+        return productMapper.countOnShelfByFilter(kw.isEmpty() ? null : kw, provinceId, categoryId);
     }
 
     /**
      * 按分页参数查询上架商品。
      */
     @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_PAGE, key = "#offset + '-' + #limit", condition = "#limit > 0")
     public List<Product> listOnShelfPage(int offset, int limit) {
         // 非法页大小直接返回空列表。
         if (limit <= 0) {
@@ -93,13 +120,58 @@ public class ProductServiceImpl implements ProductService {
         // 偏移量最小为 0。
         int o = offset < 0 ? 0 : offset;
         // 执行分页查询。
-        return productMapper.findOnShelfOrderByIdDescPaged(o, limit);
+        return productMapper.findOnShelfPagedByFilter(null, null, null, o, limit);
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_PAGE,
+            key = "(#keyword == null ? '' : #keyword.trim()) + '-' + (#provinceId == null ? 'all' : #provinceId) + '-' + (#categoryId == null ? 'all' : #categoryId) + '-' + #offset + '-' + #limit",
+            condition = "#limit > 0")
+    public List<Product> listOnShelfPage(String keyword, Long provinceId, Long categoryId, int offset, int limit) {
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+        int o = offset < 0 ? 0 : offset;
+        String kw = keyword == null ? "" : keyword.trim();
+        return productMapper.findOnShelfPagedByFilter(kw.isEmpty() ? null : kw, provinceId, categoryId, o, limit);
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_LIST, key = "'province-options'")
+    public List<ProvinceOptionDto> listProvinceOptionsForMarket() {
+        // 集市筛选展示完整省份字典，新增后可立即可见。
+        return productMapper.findAllProvinceOptions();
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_LIST, key = "'category-options'")
+    public List<CategoryOptionDto> listCategoryOptionsForMarket() {
+        // 集市筛选展示完整分类字典，新增后可立即可见。
+        return productMapper.findAllCategoryOptions();
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheNames.MARKET_LIST, key = "'category-options-' + (#provinceId == null ? 'all' : #provinceId)")
+    public List<CategoryOptionDto> listCategoryOptionsForMarket(Long provinceId) {
+        return productMapper.findCategoryOptionsForMarketByProvince(provinceId);
+    }
+
+    @Override
+    public List<ProvinceOptionDto> listAllProvinceOptions() {
+        return productMapper.findAllProvinceOptions();
+    }
+
+    @Override
+    public List<CategoryOptionDto> listAllCategoryOptions() {
+        return productMapper.findAllCategoryOptions();
     }
 
     /**
      * 根据主键查询商品。
      */
     @Override
+    @Cacheable(cacheNames = CacheNames.PRODUCT_BY_ID, key = "#id",
+            condition = "#id != null", unless = "#result == null")
     public Product getById(Long id) {
         // 按主键查询商品。
         return productMapper.findById(id);
@@ -174,6 +246,32 @@ public class ProductServiceImpl implements ProductService {
     public void createProduct(String operatorUsername, String name, String description,
                               BigDecimal price, int stock, ProductStatus status,
                               MultipartFile[] images) throws IOException {
+        createProduct(operatorUsername, name, description, price, stock, status, images, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createProduct(String operatorUsername, String name, String description,
+                              BigDecimal price, int stock, ProductStatus status,
+                              MultipartFile[] images, Long provinceId) throws IOException {
+        createProduct(operatorUsername, name, description, price, stock, status, images, provinceId, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createProduct(String operatorUsername, String name, String description,
+                              BigDecimal price, int stock, ProductStatus status,
+                              MultipartFile[] images, Long provinceId, String customProvinceName) throws IOException {
+        createProduct(operatorUsername, name, description, price, stock, status, images,
+                provinceId, customProvinceName, null, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createProduct(String operatorUsername, String name, String description,
+                              BigDecimal price, int stock, ProductStatus status,
+                              MultipartFile[] images, Long provinceId, String customProvinceName,
+                              Long categoryId, String customCategoryName) throws IOException {
         // 商品名去空白后校验非空。
         String n = name == null ? "" : name.trim();
         if (n.isEmpty()) {
@@ -223,6 +321,46 @@ public class ProductServiceImpl implements ProductService {
         p.setImages(imagesCsv);
         p.setCreatedBy(createdBy);
         productMapper.insert(p);
+        bindProvince(p.getId(), resolveProvinceId(provinceId, customProvinceName));
+        bindCategory(p.getId(), resolveCategoryId(categoryId, customCategoryName));
+        evictProductListCaches();
+    }
+
+    @Override
+    public void evictAfterStockChange(Collection<Long> productIds) {
+        if (productIds == null) {
+            return;
+        }
+        for (Long id : productIds) {
+            if (id == null) {
+                continue;
+            }
+            if (cacheManager.getCache(CacheNames.PRODUCT_BY_ID) != null) {
+                cacheManager.getCache(CacheNames.PRODUCT_BY_ID).evict(id);
+            }
+        }
+        evictProductListCaches();
+    }
+
+    @Override
+    public void evictMarketCaches() {
+        evictProductListCaches();
+    }
+
+    private void evictProductListCaches() {
+        for (String n : new String[]{
+                CacheNames.MARKET_LIST, CacheNames.MARKET_COUNT, CacheNames.MARKET_PAGE}) {
+            if (cacheManager.getCache(n) != null) {
+                cacheManager.getCache(n).clear();
+            }
+        }
+    }
+
+    private void evictProductIdAndListCaches(Long productId) {
+        if (productId != null && cacheManager.getCache(CacheNames.PRODUCT_BY_ID) != null) {
+            cacheManager.getCache(CacheNames.PRODUCT_BY_ID).evict(productId);
+        }
+        evictProductListCaches();
     }
 
     /**
@@ -239,13 +377,15 @@ public class ProductServiceImpl implements ProductService {
         if (newStatus == null) {
             throw new IllegalArgumentException("状态无效");
         }
-        // 必须先确认商品存在。
-        Product existing = productMapper.findById(id);
-        if (existing == null) {
+        // 仅更新状态字段（直接按主键更新，避免旧脏数据枚举映射影响批量操作）。
+        int n = productMapper.update(null, new UpdateWrapper<Product>()
+                .set("status", newStatus.name())
+                .setSql("updated_at = CURRENT_TIMESTAMP")
+                .eq("id", id));
+        if (n <= 0) {
             throw new IllegalArgumentException("商品不存在");
         }
-        // 仅更新状态字段。
-        productMapper.updateStatusByRow(id, newStatus.name());
+        evictProductIdAndListCaches(id);
     }
 
     /**
@@ -255,6 +395,32 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(rollbackFor = Exception.class)
     public void updateProduct(Long id, String name, String description, BigDecimal price, int stock,
                               ProductStatus status, MultipartFile[] newImages, String[] removeImageNames) throws IOException {
+        updateProduct(id, name, description, price, stock, status, newImages, removeImageNames, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProduct(Long id, String name, String description, BigDecimal price, int stock,
+                              ProductStatus status, MultipartFile[] newImages, String[] removeImageNames,
+                              Long provinceId) throws IOException {
+        updateProduct(id, name, description, price, stock, status, newImages, removeImageNames, provinceId, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProduct(Long id, String name, String description, BigDecimal price, int stock,
+                              ProductStatus status, MultipartFile[] newImages, String[] removeImageNames,
+                              Long provinceId, String customProvinceName) throws IOException {
+        updateProduct(id, name, description, price, stock, status, newImages, removeImageNames,
+                provinceId, customProvinceName, null, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProduct(Long id, String name, String description, BigDecimal price, int stock,
+                              ProductStatus status, MultipartFile[] newImages, String[] removeImageNames,
+                              Long provinceId, String customProvinceName,
+                              Long categoryId, String customCategoryName) throws IOException {
         // 基础存在性校验。
         if (id == null) {
             throw new IllegalArgumentException("商品不存在");
@@ -332,13 +498,78 @@ public class ProductServiceImpl implements ProductService {
         p.setStatus(status);
         p.setImages(imagesCsv);
         productMapper.updateById(p);
+        bindProvince(id, resolveProvinceId(provinceId, customProvinceName));
+        bindCategory(id, resolveCategoryId(categoryId, customCategoryName));
+        evictProductIdAndListCaches(id);
 
         // 仅当图片已无数据库引用时才删除物理文件，避免误删被复用图片。
         for (String removed : toRemove) {
-            if (productMapper.countHavingStoredImage(removed) == 0) {
+            if (!isStoredImageRegistered(removed)) {
                 fileStorageService.deleteStoredSilently(removed);
             }
         }
+    }
+
+    private void bindProvince(Long productId, Long provinceId) {
+        if (productId == null) {
+            return;
+        }
+        if (provinceId == null) {
+            productMapper.deleteProductProvince(productId);
+            return;
+        }
+        productMapper.upsertProductProvince(productId, provinceId);
+    }
+
+    private Long resolveProvinceId(Long provinceId, String customProvinceName) {
+        String name = customProvinceName == null ? "" : customProvinceName.trim();
+        if (name.isEmpty()) {
+            return provinceId;
+        }
+        if (name.length() > 32) {
+            throw new IllegalArgumentException("省份名称长度不能超过32个字符");
+        }
+        ProvinceOptionDto existing = productMapper.findProvinceByName(name);
+        if (existing != null && existing.getId() != null) {
+            return existing.getId();
+        }
+        productMapper.insertProvinceIgnore(name);
+        ProvinceOptionDto created = productMapper.findProvinceByName(name);
+        if (created == null || created.getId() == null) {
+            throw new IllegalArgumentException("省份保存失败");
+        }
+        return created.getId();
+    }
+
+    private void bindCategory(Long productId, Long categoryId) {
+        if (productId == null) {
+            return;
+        }
+        if (categoryId == null) {
+            productMapper.deleteProductCategory(productId);
+            return;
+        }
+        productMapper.upsertProductCategory(productId, categoryId);
+    }
+
+    private Long resolveCategoryId(Long categoryId, String customCategoryName) {
+        String name = customCategoryName == null ? "" : customCategoryName.trim();
+        if (name.isEmpty()) {
+            return categoryId;
+        }
+        if (name.length() > 32) {
+            throw new IllegalArgumentException("分类名称长度不能超过32个字符");
+        }
+        CategoryOptionDto existing = productMapper.findCategoryByName(name);
+        if (existing != null && existing.getId() != null) {
+            return existing.getId();
+        }
+        productMapper.insertCategoryIgnore(name);
+        CategoryOptionDto created = productMapper.findCategoryByName(name);
+        if (created == null || created.getId() == null) {
+            throw new IllegalArgumentException("分类保存失败");
+        }
+        return created.getId();
     }
 
     /**
@@ -355,20 +586,59 @@ public class ProductServiceImpl implements ProductService {
         if (existing == null) {
             throw new IllegalArgumentException("商品不存在");
         }
-        // 仅允许删除已下架商品，避免误删在售数据。
-        if (existing.getStatus() != ProductStatus.OFF_SHELF) {
-            throw new IllegalArgumentException("仅已下架的商品可以删除");
-        }
+        // 管理员删除优先：允许直接删除，不主动改动其它业务数据。
         // 先记录图片名，供删除后清理文件。
         List<String> imageNames = new ArrayList<String>(splitStoredImageNames(existing));
-        // 删除商品主记录。
-        int n = productMapper.deleteById(id);
+        // 仅删除商品主记录，不改动其它业务表数据。
+        int n;
+        try {
+            n = productMapper.deleteById(id);
+        } catch (RuntimeException ex) {
+            if (!isConstraintViolation(ex)) {
+                throw ex;
+            }
+            // 若数据库存在外键约束，按“只删商品表”策略做强制删除（不改动其他表数据）。
+            n = forceDeleteProductRowOnly(id);
+        }
         if (n == 0) {
             throw new IllegalArgumentException("删除失败");
         }
+        evictProductIdAndListCaches(id);
         // 商品删除后清理关联图片文件。
         for (String name : imageNames) {
             fileStorageService.deleteStoredSilently(name);
         }
+    }
+
+    /**
+     * 仅删除商品表记录，忽略会阻塞删除的外键检查（会保留其它业务表原记录）。
+     */
+    private int forceDeleteProductRowOnly(Long id) {
+        jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS=0");
+        try {
+            return productMapper.deleteById(id);
+        } finally {
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS=1");
+        }
+    }
+
+    /**
+     * 判断是否为外键/约束类删除异常。
+     */
+    private static boolean isConstraintViolation(Throwable t) {
+        Throwable cur = t;
+        while (cur != null) {
+            String cls = cur.getClass().getName();
+            String msg = cur.getMessage();
+            if (cls.contains("DataIntegrityViolation")
+                    || cls.contains("SQLIntegrityConstraintViolationException")
+                    || cls.contains("ConstraintViolationException")
+                    || (msg != null && (msg.contains("foreign key")
+                    || msg.contains("a foreign key constraint fails")))) {
+                return true;
+            }
+            cur = cur.getCause();
+        }
+        return false;
     }
 }

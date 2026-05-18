@@ -26,40 +26,61 @@
 </header>
 <main class="landing-main user-center-main">
     <section class="user-center-panel user-center-actions-panel" th:if="${profile != null}">
-        <p class="landing-kicker">账户安全</p>
+        <p class="landing-kicker user-center-edit-kicker">账户安全</p>
         <h1 class="user-center-panel-title user-center-edit-title">编辑我的信息</h1>
-        <p class="muted user-center-edit-tip">修改成功后会自动退出，请使用新账号重新登录。</p>
-        <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
-        <form id="user-center-edit-form" class="user-center-edit-form" th:action="@{/user/profile/update}" method="post" novalidate autocomplete="off">
+        <p class="user-center-edit-summary">每次保存需填<strong>当前密码</strong>。可只改登录名或只改密；不打算改密则新密码两栏都留空。保存成功会<strong>自动登出</strong>，请用新信息重登。</p>
+
+        <p th:if="${err}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${err}">错误</p>
+
+        <form id="user-center-edit-form" class="user-center-edit-form user-center-edit-form--one-screen" th:action="@{/user/profile/update}" method="post" novalidate autocomplete="off">
             <input type="text" name="fake_username" autocomplete="username" tabindex="-1"
                    aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;"/>
             <input type="password" name="fake_password" autocomplete="new-password" tabindex="-1"
                    aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;"/>
-            <label class="user-center-edit-label" for="profile-username">登录账号</label>
-            <input id="profile-username" name="username" class="user-center-edit-input"
-                   th:value="${profile.username}" maxlength="64" required
-                   autocomplete="off" autocapitalize="off" spellcheck="false"
-                   readonly onfocus="this.removeAttribute('readonly');"/>
 
-            <label class="user-center-edit-label" for="profile-old-password">当前密码</label>
-            <input id="profile-old-password" name="oldPassword" class="user-center-edit-input"
-                   type="password" maxlength="128" required
-                   autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+            <div class="user-center-edit-cols" aria-label="登录名与身份验证">
+                <div class="user-center-field">
+                    <label class="user-center-edit-label" for="profile-username">登录名</label>
+                    <p class="user-center-edit-hint" id="hint-username">改后用新名登录</p>
+                    <input id="profile-username" name="username" class="user-center-edit-input" aria-describedby="hint-username"
+                           th:value="${profile.username}" maxlength="64" required
+                           autocomplete="off" autocapitalize="off" spellcheck="false"
+                           readonly onfocus="this.removeAttribute('readonly');"/>
+                </div>
+                <fieldset class="user-center-edit-section user-center-edit-section--verify">
+                    <legend>当前密码</legend>
+                    <p class="user-center-edit-hint" id="hint-old-pwd">验本人用，非新密码</p>
+                    <input id="profile-old-password" name="oldPassword" class="user-center-edit-input" type="password"
+                           aria-describedby="hint-old-pwd" maxlength="128" required
+                           autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+                </fieldset>
+            </div>
 
-            <label class="user-center-edit-label" for="profile-new-password">新密码（可选）</label>
-            <input id="profile-new-password" name="newPassword" class="user-center-edit-input"
-                   type="password" maxlength="128" placeholder="留空表示不修改密码"
-                   autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+            <fieldset class="user-center-edit-section user-center-edit-section--password">
+                <legend>新密码 <span class="user-center-edit-legend-note">（可两栏都空）</span></legend>
+                <div class="user-center-edit-cols user-center-edit-cols--password">
+                    <div class="user-center-field">
+                        <label class="user-center-edit-label" for="profile-new-password">新密码</label>
+                        <p class="user-center-edit-hint" id="hint-new-pwd">3～128 字；空＝不改</p>
+                        <input id="profile-new-password" name="newPassword" class="user-center-edit-input" type="password"
+                               aria-describedby="hint-new-pwd" maxlength="128" placeholder="不修改则留空"
+                               autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+                    </div>
+                    <div class="user-center-field">
+                        <label class="user-center-edit-label" for="profile-confirm-password">再输一遍</label>
+                        <p class="user-center-edit-hint" id="hint-confirm">须与新密码相同</p>
+                        <input id="profile-confirm-password" name="confirmPassword" class="user-center-edit-input" type="password"
+                               aria-describedby="hint-confirm profile-password-error" maxlength="128" placeholder="与新密码相同"
+                               autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
+                    </div>
+                </div>
+            </fieldset>
 
-            <label class="user-center-edit-label" for="profile-confirm-password">确认新密码</label>
-            <input id="profile-confirm-password" name="confirmPassword" class="user-center-edit-input"
-                   type="password" maxlength="128" placeholder="填写新密码时请再次输入"
-                   autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
-            <p id="profile-password-error" class="user-center-edit-error" aria-live="polite"></p>
+            <p id="profile-password-error" class="user-center-edit-error" role="alert" aria-live="polite"></p>
 
             <div class="user-center-edit-actions">
                 <button type="submit" class="btn-landing primary user-center-save-btn">保存修改</button>
-                <a class="btn-landing secondary" th:href="@{/user/profile}">取消</a>
+                <a class="btn-landing secondary" th:href="@{/user/profile}">取消，返回中心</a>
             </div>
         </form>
     </section>
@@ -83,7 +104,7 @@
             var confirmPwd = (confirmPasswordInput.value || '').trim();
             var mismatch = newPwd.length > 0 && newPwd !== confirmPwd;
             if (mismatch) {
-                errorTip.textContent = '两次输入的新密码不一致。';
+                errorTip.textContent = '两次输入的新密码不一致，请检查。';
                 confirmPasswordInput.classList.add('is-invalid');
                 confirmPasswordInput.setAttribute('aria-invalid', 'true');
                 return false;
@@ -104,5 +125,6 @@
         });
     })();
 </script>
+<script th:src="@{/js/flash-alert.js}"></script>
 </body>
 </html>

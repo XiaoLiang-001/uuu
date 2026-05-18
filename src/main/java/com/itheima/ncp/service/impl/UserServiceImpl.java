@@ -1,10 +1,15 @@
 package com.itheima.ncp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.itheima.ncp.config.cache.CacheNames;
 import com.itheima.ncp.dto.AdminUserRowDto;
 import com.itheima.ncp.entity.user.User;
 import com.itheima.ncp.entity.user.UserRole;
 import com.itheima.ncp.mapper.user.UserMapper;
 import com.itheima.ncp.service.user.UserService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,13 +41,19 @@ public class UserServiceImpl implements UserService {
      * 按用户名查询用户，自动处理空白输入。
      */
     @Override
+    @Cacheable(cacheNames = CacheNames.USER_BY_NAME, key = "#username.trim()",
+            condition = "#username != null && !#username.trim().isEmpty()",
+            unless = "#result == null")
     public User getByUsername(String username) {
         // 空用户名直接返回空，调用方据此判断“未命中”。
         if (username == null || username.trim().isEmpty()) {
             return null;
         }
-        // 统一 trim 后再查库，避免前后空格导致重复账号问题。
-        return userMapper.findByUsername(username.trim());
+        // 使用 MP 条件构造器按 trim 口径查询。
+        QueryWrapper<User> qw = new QueryWrapper<User>()
+                .apply("TRIM(username) = TRIM({0})", username.trim())
+                .last("LIMIT 1");
+        return userMapper.selectOne(qw);
     }
 
     /**
@@ -51,7 +62,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User getUserById(Long id) {
         // 主键为空时不查库，直接返回空。
-        return id == null ? null : userMapper.findById(id);
+        return id == null ? null : userMapper.selectById(id);
     }
 
     /**
@@ -64,7 +75,7 @@ public class UserServiceImpl implements UserService {
             return false;
         }
         // 使用 trim 口径统计，和注册/修改口径保持一致。
-        return userMapper.countByUsernameTrim(username) > 0;
+        return countByUsernameTrim(username) > 0;
     }
 
     /**
@@ -118,7 +129,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<AdminUserRowDto> listAllForAdmin() {
         // 全量查询并映射为管理端展示 DTO。
-        return userMapper.findAllOrderByIdDesc().stream()
+        return userMapper.selectList(new QueryWrapper<User>().orderByDesc("id")).stream()
                 .map(this::toRow)
                 .collect(Collectors.toList());
     }
@@ -130,8 +141,13 @@ public class UserServiceImpl implements UserService {
     public List<AdminUserRowDto> listForAdmin(String keyword) {
         // 关键字统一 trim，空串表示不过滤。
         String normalizedKeyword = keyword == null ? "" : keyword.trim();
-        // Mapper 已处理模糊查询逻辑，这里只做参数规范化与映射。
-        return userMapper.findByKeywordOrderByIdDesc(normalizedKeyword).stream()
+        // 使用 MP 条件构造器动态拼接关键字条件。
+        QueryWrapper<User> qw = new QueryWrapper<User>();
+        if (!normalizedKeyword.isEmpty()) {
+            qw.like("username", normalizedKeyword);
+        }
+        qw.orderByDesc("id");
+        return userMapper.selectList(qw).stream()
                 .map(this::toRow)
                 .collect(Collectors.toList());
     }
@@ -140,6 +156,7 @@ public class UserServiceImpl implements UserService {
      * 管理员修改用户启用状态。
      */
     @Override
+    @CacheEvict(cacheNames = CacheNames.USER_BY_NAME, allEntries = true)
     public void updateStatusByAdmin(Long userId, int status, String operatorUsername) {
         // 仅允许启用/禁用两个状态值。
         if (status != User.STATUS_DISABLED && status != User.STATUS_ENABLED) {
@@ -150,7 +167,7 @@ public class UserServiceImpl implements UserService {
         // 规范化操作者用户名。
         String operator = operatorUsername == null ? "" : operatorUsername.trim();
         // 必须能在库中定位到当前操作者。
-        if (operator.isEmpty() || userMapper.countByUsernameTrim(operator) <= 0) {
+        if (operator.isEmpty() || countByUsernameTrim(operator) <= 0) {
             throw new IllegalArgumentException("无法识别当前操作者");
         }
         // 旧数据脏值保护：role 为空时拒绝管理操作。
@@ -171,7 +188,10 @@ public class UserServiceImpl implements UserService {
             @Override
             public void run() {
                 // 仅更新状态字段。
-                userMapper.updateStatus(userId, status);
+                userMapper.update(null,
+                        new UpdateWrapper<User>()
+                                .set("status", status)
+                                .eq("id", userId));
             }
         });
     }
@@ -190,6 +210,7 @@ public class UserServiceImpl implements UserService {
      * 管理员新增普通用户。
      */
     @Override
+    @CacheEvict(cacheNames = CacheNames.USER_BY_NAME, allEntries = true)
     public void createByAdmin(String username, String rawPassword, UserRole role, int status, String operatorUsername) {
         // 先确认操作者有效。
         requireOperator(operatorUsername);
@@ -206,7 +227,7 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("状态值无效");
         }
         // 账号唯一性校验。
-        if (userMapper.countByUsernameTrim(normalized) > 0) {
+        if (countByUsernameTrim(normalized) > 0) {
             throw new IllegalArgumentException("登录账号已存在");
         }
         // 组装待插入用户。
@@ -230,26 +251,22 @@ public class UserServiceImpl implements UserService {
      * 管理员更新普通用户信息，可选修改密码。
      */
     @Override
+    @CacheEvict(cacheNames = CacheNames.USER_BY_NAME, allEntries = true)
     public void updateByAdmin(Long userId, String username, String rawNewPasswordOrNullOrBlank,
                               String oldPasswordWhenChanging, int status, String operatorUsername) {
-        // 先确认操作者有效。
         requireOperator(operatorUsername);
-        // 校验目标用户存在。
         User target = requireUser(userId);
         if (target.getRole() == null) {
             throw new IllegalArgumentException("该用户 role 在库中无效或空，请先将 sys_user.role 修正为 USER 或 ADMIN 后再试");
         }
-        // 管理页不允许修改管理员。
         if (target.getRole() == UserRole.ADMIN) {
             throw new IllegalArgumentException("管理员账号不可在此修改");
         }
-        // 新用户名规范化与格式校验。
         String normalized = normalizeAndValidateUsername(username);
         if (status != User.STATUS_DISABLED && status != User.STATUS_ENABLED) {
             throw new IllegalArgumentException("状态值无效");
         }
-        // 排除自身后校验用户名唯一性。
-        if (userMapper.countByUsernameTrimExceptId(normalized, userId) > 0) {
+        if (countByUsernameTrimExceptId(normalized, userId) > 0) {
             throw new IllegalArgumentException("登录账号已被占用");
         }
         if (operatorUsername != null && operatorUsername.equals(target.getUsername())
@@ -257,17 +274,14 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("不能将当前登录账号设为禁用");
         }
 
-        // 构造“部分更新”对象，只更新允许改动字段。
         User patch = new User();
         patch.setId(userId);
         patch.setUsername(normalized);
         patch.setStatus(status);
         if (rawNewPasswordOrNullOrBlank != null) {
             String newPw = rawNewPasswordOrNullOrBlank.trim();
-            // 非空字符串才视为“要改密码”。
             if (!newPw.isEmpty()) {
                 validateRawPassword(newPw);
-                // 管理端改他人密码时要求输入该用户旧密码，降低误改风险。
                 String oldIn = oldPasswordWhenChanging == null ? "" : oldPasswordWhenChanging.trim();
                 if (oldIn.isEmpty()) {
                     throw new IllegalArgumentException("修改密码时请填写该用户的原密码");
@@ -275,20 +289,16 @@ public class UserServiceImpl implements UserService {
                 if (!passwordEncoder.matches(oldIn, target.getPassword())) {
                     throw new IllegalArgumentException("原密码不正确");
                 }
-                // 写入新密码密文。
                 patch.setPassword(passwordEncoder.encode(newPw));
             } else {
-                // 显式传空串时，不更新密码字段。
                 patch.setPassword(null);
             }
         } else {
-            // 未传字段时，同样不更新密码字段。
             patch.setPassword(null);
         }
         executeWriteWithRetry("更新用户信息", new Runnable() {
             @Override
             public void run() {
-                // 执行选择性更新。
                 userMapper.updateByIdSelective(patch);
             }
         });
@@ -298,6 +308,7 @@ public class UserServiceImpl implements UserService {
      * 管理员删除普通用户。
      */
     @Override
+    @CacheEvict(cacheNames = CacheNames.USER_BY_NAME, allEntries = true)
     public void deleteByAdmin(Long userId, String operatorUsername) {
         // 先确认操作者有效。
         requireOperator(operatorUsername);
@@ -327,6 +338,7 @@ public class UserServiceImpl implements UserService {
      * 用户修改个人资料（用户名/密码）。
      */
     @Override
+    @CacheEvict(cacheNames = CacheNames.USER_BY_NAME, allEntries = true)
     public void updateSelfProfile(String currentUsername, String newUsername,
                                  String oldPassword, String newPasswordOrBlank) {
         // 当前登录名必须可用。
@@ -352,7 +364,7 @@ public class UserServiceImpl implements UserService {
         String normalizedUsername = normalizeAndValidateUsername(newUsername);
         // 若改了用户名，则检查唯一性。
         if (!Objects.equals(normalizedUsername, currentUser.getUsername())
-                && userMapper.countByUsernameTrimExceptId(normalizedUsername, currentUser.getId()) > 0) {
+                && countByUsernameTrimExceptId(normalizedUsername, currentUser.getId()) > 0) {
             throw new IllegalArgumentException("登录账号已被占用");
         }
 
@@ -388,9 +400,29 @@ public class UserServiceImpl implements UserService {
         // 统一处理操作者空值与空白字符串。
         String operator = operatorUsername == null ? "" : operatorUsername.trim();
         // 操作者必须真实存在。
-        if (operator.isEmpty() || userMapper.countByUsernameTrim(operator) <= 0) {
+        if (operator.isEmpty() || countByUsernameTrim(operator) <= 0) {
             throw new IllegalArgumentException("无法识别当前操作者");
         }
+    }
+
+    /**
+     * 统计用户名（按 trim 口径）是否存在。
+     */
+    private int countByUsernameTrim(String username) {
+        return Math.toIntExact(userMapper.selectCount(
+                new QueryWrapper<User>().apply("TRIM(username) = TRIM({0})", username)));
+    }
+
+    /**
+     * 统计除指定 id 外用户名（按 trim 口径）是否存在。
+     */
+    private int countByUsernameTrimExceptId(String username, Long excludedId) {
+        QueryWrapper<User> qw = new QueryWrapper<User>()
+                .apply("TRIM(username) = TRIM({0})", username);
+        if (excludedId != null) {
+            qw.ne("id", excludedId);
+        }
+        return Math.toIntExact(userMapper.selectCount(qw));
     }
 
     /**

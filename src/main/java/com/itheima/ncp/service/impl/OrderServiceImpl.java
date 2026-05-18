@@ -1,5 +1,6 @@
 package com.itheima.ncp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.itheima.ncp.entity.product.Product;
 import com.itheima.ncp.entity.product.ProductStatus;
 import com.itheima.ncp.entity.shop.CartItem;
@@ -10,6 +11,7 @@ import com.itheima.ncp.mapper.cart.CartItemMapper;
 import com.itheima.ncp.mapper.order.OrderItemMapper;
 import com.itheima.ncp.mapper.order.ShopOrderMapper;
 import com.itheima.ncp.mapper.product.ProductMapper;
+import com.itheima.ncp.service.product.ProductService;
 import com.itheima.ncp.service.shop.CartService;
 import com.itheima.ncp.service.shop.OrderService;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -31,17 +36,20 @@ public class OrderServiceImpl implements OrderService {
     private final ShopOrderMapper shopOrderMapper;
     private final OrderItemMapper orderItemMapper;
     private final CartService cartService;
+    private final ProductService productService;
 
     public OrderServiceImpl(CartItemMapper cartItemMapper,
                             ProductMapper productMapper,
                            ShopOrderMapper shopOrderMapper,
                             OrderItemMapper orderItemMapper,
-                           CartService cartService) {
+                           CartService cartService,
+                            ProductService productService) {
         this.cartItemMapper = cartItemMapper;
         this.productMapper = productMapper;
         this.shopOrderMapper = shopOrderMapper;
         this.orderItemMapper = orderItemMapper;
         this.cartService = cartService;
+        this.productService = productService;
     }
 
     /**
@@ -71,7 +79,9 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 获取购物车快照。
-        List<CartItem> cartRows = cartItemMapper.findByUserId(userId);
+        List<CartItem> cartRows = cartItemMapper.selectList(new QueryWrapper<CartItem>()
+                .eq("user_id", userId)
+                .orderByDesc("id"));
         // 无购物车项时不允许下单。
         if (cartRows.isEmpty()) {
             throw new IllegalArgumentException("购物车为空");
@@ -79,12 +89,17 @@ public class OrderServiceImpl implements OrderService {
 
         // 订单总金额累计变量。
         BigDecimal total = BigDecimal.ZERO;
+        // 本次可正常结算的购物车项。
+        List<CartItem> validRows = new ArrayList<CartItem>();
+        // 下架/删除导致的失效购物车项，结算时自动清理并提示用户重试。
+        List<Long> invalidCartItemIds = new ArrayList<Long>();
         // 下单前先做一轮完整校验，避免写订单后才发现库存/状态不合法。
         for (CartItem row : cartRows) {
             // 加载商品最新信息。
             Product p = productMapper.findById(row.getProductId());
             if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
-                throw new IllegalArgumentException("存在已下架商品，请返回购物车调整：" + row.getProductId());
+                invalidCartItemIds.add(row.getId());
+                continue;
             }
             // 购物车数量空值按 0 处理，后续统一校验。
             int qty = row.getQuantity() != null ? row.getQuantity() : 0;
@@ -96,6 +111,19 @@ public class OrderServiceImpl implements OrderService {
             // 行小计 = 单价 * 数量，保留 2 位小数。
             BigDecimal line = p.getPrice().multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
             total = total.add(line);
+            validRows.add(row);
+        }
+        // 清理本次发现的失效条目。
+        if (!invalidCartItemIds.isEmpty()) {
+            for (Long invalidId : invalidCartItemIds) {
+                cartItemMapper.delete(new QueryWrapper<CartItem>()
+                        .eq("id", invalidId)
+                        .eq("user_id", userId));
+            }
+        }
+        // 全部条目都失效时，才阻断下单。
+        if (validRows.isEmpty()) {
+            throw new IllegalArgumentException("购物车商品已下架或已删除，已自动清理，请重新选择商品");
         }
         // 订单总额统一保留 2 位小数。
         total = total.setScale(2, RoundingMode.HALF_UP);
@@ -115,10 +143,18 @@ public class OrderServiceImpl implements OrderService {
         Long orderId = order.getId();
 
         // 主订单落库后写明细并扣库存；任一步失败会由事务整体回滚。
-        for (CartItem row : cartRows) {
+        Set<Long> stockTouched = new HashSet<Long>();
+        for (CartItem row : validRows) {
             // 再次取商品，确保写明细用到的是当前商品信息。
             Product p = productMapper.findById(row.getProductId());
+            if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
+                throw new IllegalArgumentException("存在已下架或已删除商品，请返回购物车刷新后重试");
+            }
             int qty = row.getQuantity() != null ? row.getQuantity() : 0;
+            int stock = p.getStock() != null ? p.getStock() : 0;
+            if (qty < 1 || qty > stock) {
+                throw new IllegalArgumentException("库存不足或数量异常：" + p.getName());
+            }
             BigDecimal line = p.getPrice().multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
             // 构建订单明细行。
             OrderItem oi = new OrderItem();
@@ -135,10 +171,13 @@ public class OrderServiceImpl implements OrderService {
             if (dec != 1) {
                 throw new IllegalStateException("扣减库存失败，请重试：" + p.getName());
             }
+            stockTouched.add(p.getId());
         }
 
         // 订单创建成功后清空购物车，防止重复提交。
         cartService.clearCart(userId);
+        // 扣库存未走商品服务，需显式清理相关读缓存。
+        productService.evictAfterStockChange(stockTouched);
         return orderId;
     }
 
@@ -157,7 +196,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public ShopOrder getOrderForUser(Long orderId, Long userId) {
         // 通过 orderId + userId 双条件保证只能看自己的订单。
-        return shopOrderMapper.findByIdAndUserId(orderId, userId);
+        return shopOrderMapper.selectOne(new QueryWrapper<ShopOrder>()
+                .eq("id", orderId)
+                .eq("user_id", userId)
+                .last("LIMIT 1"));
     }
 
     /**
@@ -166,7 +208,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<ShopOrder> listOrders(Long userId) {
         // 返回用户订单，默认倒序。
-        return shopOrderMapper.findByUserIdOrderByIdDesc(userId);
+        return shopOrderMapper.selectList(new QueryWrapper<ShopOrder>()
+                .eq("user_id", userId)
+                .orderByDesc("id"));
     }
 
     /**
@@ -175,6 +219,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderItem> listOrderItems(Long orderId) {
         // 加载订单的全部明细行。
-        return orderItemMapper.findByOrderId(orderId);
+        return orderItemMapper.selectList(new QueryWrapper<OrderItem>()
+                .eq("order_id", orderId)
+                .orderByAsc("id"));
     }
 }

@@ -28,7 +28,6 @@
         <p th:if="${param.disabled != null}" class="login-agri-alert login-agri-alert--error" role="alert">该账号已被禁用，无法登录。如需使用请联系管理员处理。</p>
 
         <form class="login-agri-form" th:action="@{/login}" method="post">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <label class="login-agri-label" for="login-username">
                 <span class="login-agri-label-text">账号</span>
                 <input id="login-username" class="login-agri-input" type="text" name="username"

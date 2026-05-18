@@ -41,10 +41,20 @@ public class AdminProductController {
     }
 
     /**
+     * 打开分类管理页（省份 + 分类）。
+     */
+    @GetMapping("/admin/taxonomy")
+    public String taxonomyPage() {
+        return "admin/taxonomy";
+    }
+
+    /**
      * 打开新增商品表单页。
      */
     @GetMapping("/admin/products/new")
-    public String newForm() {
+    public String newForm(Model model) {
+        model.addAttribute("provinceOptions", productService.listAllProvinceOptions());
+        model.addAttribute("categoryOptions", productService.listAllCategoryOptions());
         // 返回新增商品页面模板。
         return "admin/product-form";
     }
@@ -60,6 +70,10 @@ public class AdminProductController {
             @RequestParam("price") String priceStr,
             @RequestParam("stock") int stock,
             @RequestParam(value = "status", defaultValue = "ON_SHELF") String statusStr,
+            @RequestParam(value = "provinceId", required = false) Long provinceId,
+            @RequestParam(value = "provinceName", required = false) String customProvinceName,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "categoryName", required = false) String customCategoryName,
             @RequestParam(value = "images", required = false) MultipartFile[] images,
             RedirectAttributes ra) {
         try {
@@ -74,7 +88,8 @@ public class AdminProductController {
             // 记录操作者用户名（可为空）。
             String op = principal != null ? principal.getUsername() : null;
             // 调用 service 执行创建与图片保存。
-            productService.createProduct(op, name, description, price, stock, status, images);
+            productService.createProduct(op, name, description, price, stock, status, images,
+                    provinceId, customProvinceName, categoryId, customCategoryName);
             ra.addFlashAttribute("msg", "商品已创建");
         } catch (Exception e) {
             // 优先返回业务异常信息，兜底返回通用提示。
@@ -100,6 +115,8 @@ public class AdminProductController {
         // 注入详情与图片列表供页面回显。
         model.addAttribute("product", p);
         model.addAttribute("imageNames", productService.splitStoredImageNames(p));
+        model.addAttribute("provinceOptions", productService.listAllProvinceOptions());
+        model.addAttribute("categoryOptions", productService.listAllCategoryOptions());
         return "admin/product-detail";
     }
 
@@ -114,9 +131,14 @@ public class AdminProductController {
             @RequestParam("price") String priceStr,
             @RequestParam("stock") int stock,
             @RequestParam("status") String statusStr,
+            @RequestParam(value = "provinceId", required = false) Long provinceId,
+            @RequestParam(value = "provinceName", required = false) String customProvinceName,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "categoryName", required = false) String customCategoryName,
             @RequestParam(value = "images", required = false) MultipartFile[] images,
             @RequestParam(value = "removeImages", required = false) String[] removeImages,
             RedirectAttributes ra) {
+        boolean ok = false;
         try {
             // 解析并校验价格与状态。
             BigDecimal price = new BigDecimal(priceStr.trim());
@@ -125,8 +147,10 @@ public class AdminProductController {
                 throw new IllegalArgumentException("状态只能选择上架或下架");
             }
             // 调用 service 执行商品更新和图片增删。
-            productService.updateProduct(id, name, description, price, stock, status, images, removeImages);
+            productService.updateProduct(id, name, description, price, stock, status, images, removeImages,
+                    provinceId, customProvinceName, categoryId, customCategoryName);
             ra.addFlashAttribute("msg", "已保存");
+            ok = true;
         } catch (IOException e) {
             // 文件 IO 异常给出专门提示。
             ra.addFlashAttribute("error", "图片处理失败");
@@ -134,7 +158,11 @@ public class AdminProductController {
             String m = e.getMessage() != null ? e.getMessage() : "保存失败";
             ra.addFlashAttribute("error", m);
         }
-        // 无论成功失败都回详情页，由 flash 显示结果。
+        if (ok) {
+            // 保存成功后回到列表页。
+            return "redirect:/admin/products";
+        }
+        // 保存失败回编辑页，由 flash 显示错误。
         return "redirect:/admin/products/" + id;
     }
 }

@@ -7,10 +7,10 @@ import lombok.Data;
 public class AdminUserUpdateRequest {
     /** 登录账号。 */
     private String username;
-    /** 新密码（可为空表示不修改）。 */
+    /** 新密码；空串表示不改密。 */
     private String password;
-    /** 旧密码（修改密码时用于校验）。 */
+    /** 改密时需提供该用户原密码。 */
     private String oldPassword;
     /** 用户状态（0禁用/1启用）。 */
-    private int status;
+    private Integer status;
 }

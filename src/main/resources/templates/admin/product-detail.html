@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title th:text="'编辑 · ' + ${product.name} + ' · 农家优品'">商品编辑</title>
+    <title th:text="${'编辑 · ' + product.name + ' · 农家优品'}">商品编辑</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
 </head>
 <body class="admin-product-form-agri">
@@ -25,11 +25,10 @@
             <h1 th:text="${product.name}">商品</h1>
             <p class="product-edit-subtitle">可在此修改名称、描述、价格、库存与图片；保存后立即生效。</p>
 
-            <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
-            <p th:if="${error}" class="user-shop-alert err" th:text="${error}">错误</p>
+            <p th:if="${msg}" class="js-flash-alert" data-alert-mode="always" hidden th:text="${msg}">提示</p>
+            <p th:if="${error}" class="js-flash-alert" data-alert-mode="always" hidden th:text="${error}">错误</p>
 
             <form th:action="@{/admin/products/{id}(id=${product.id})}" method="post" enctype="multipart/form-data" class="product-edit-form">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <div class="product-edit-layout">
                     <section class="product-edit-section">
                         <h2>基础信息</h2>
@@ -51,13 +50,33 @@
                                 <input type="number" name="stock" min="0" required th:value="${product.stock}"/>
                             </label>
                         </div>
-                        <label class="product-edit-status-field">
-                            状态
-                            <select name="status">
-                                <option value="ON_SHELF" th:selected="${product.status != null and product.status.name() == 'ON_SHELF'}">上架</option>
-                                <option value="OFF_SHELF" th:selected="${product.status != null and product.status.name() == 'OFF_SHELF'}">下架</option>
-                            </select>
-                        </label>
+                        <div class="product-edit-grid-three">
+                            <label class="product-edit-status-field">
+                                状态
+                                <select name="status">
+                                    <option value="ON_SHELF" th:selected="${product.status != null and product.status.name() == 'ON_SHELF'}">上架</option>
+                                    <option value="OFF_SHELF" th:selected="${product.status != null and product.status.name() == 'OFF_SHELF'}">下架</option>
+                                </select>
+                            </label>
+                            <label class="product-edit-status-field">
+                                产地（可选可填）
+                                <input type="text" name="provinceName" maxlength="32" list="provinceNameOptions"
+                                       th:value="${product.provinceName}"
+                                       placeholder="可下拉选择，也可直接输入；留空表示未指定"/>
+                                <datalist id="provinceNameOptions">
+                                    <option th:each="opt : ${provinceOptions}" th:value="${opt.name}">省份</option>
+                                </datalist>
+                            </label>
+                            <label class="product-edit-status-field">
+                                商品分类（可选可填）
+                                <input type="text" name="categoryName" maxlength="32" list="categoryNameOptions"
+                                       th:value="${product.categoryName}"
+                                       placeholder="可下拉选择，也可直接输入；留空表示未指定"/>
+                                <datalist id="categoryNameOptions">
+                                    <option th:each="opt : ${categoryOptions}" th:value="${opt.name}">分类</option>
+                                </datalist>
+                            </label>
+                        </div>
                     </section>
                     <section class="product-edit-section product-edit-media-section">
                         <h2>已有图片</h2>
@@ -106,8 +125,24 @@
             this.value = '0';
         }
     });
+
+    var form = document.querySelector('.product-edit-form');
+    var submitBtn = form ? form.querySelector('.product-edit-submit-btn') : null;
+    var submitting = false;
+    if (form && submitBtn) {
+        form.addEventListener('submit', function (event) {
+            if (submitting) {
+                event.preventDefault();
+                return false;
+            }
+            submitting = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '保存中...';
+        });
+    }
 })();
 </script>
 <script th:src="@{/js/product-image-preview.js}"></script>
+<script th:src="@{/js/flash-alert.js}"></script>
 </body>
 </html>

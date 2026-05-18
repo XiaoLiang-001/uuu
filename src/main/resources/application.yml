@@ -20,11 +20,26 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
 
-# MyBatis：持久层接口在 com.itheima.ncp.mapper
+  # Redis：本地需启动 Redis 服务后可用缓存；无 Redis 时可将 spring.cache.type 改为 none
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    timeout: 3s
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 4
+        min-idle: 0
+  # 缓存：用户侧商品列表/详情、按用户名查库等；无 Redis 时可将 type 改为 none
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600s
+      cache-null-values: false
+    cache-names: productById,marketList,marketCount,marketPage,userByName
 mybatis-plus:
   type-aliases-package: com.itheima.ncp.entity,com.itheima.ncp.entity.user,com.itheima.ncp.entity.product,com.itheima.ncp.entity.shop
   type-handlers-package: com.itheima.ncp.type
-  mapper-locations: classpath:mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
     default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler

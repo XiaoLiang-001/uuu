@@ -2,8 +2,11 @@ package com.itheima.ncp.controller;
 
 import com.itheima.ncp.common.ApiResult;
 import com.itheima.ncp.dto.AdminProductDetailDto;
+import com.itheima.ncp.dto.AdminProductBatchRequest;
 import com.itheima.ncp.dto.AdminProductRowDto;
 import com.itheima.ncp.dto.AdminProductStatusRequest;
+import com.itheima.ncp.dto.CategoryOptionDto;
+import com.itheima.ncp.dto.ProvinceOptionDto;
 import com.itheima.ncp.entity.product.Product;
 import com.itheima.ncp.entity.product.ProductStatus;
 import com.itheima.ncp.service.product.ProductService;
@@ -20,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -41,14 +46,32 @@ public class AdminProductApiController {
     @GetMapping
     public ResponseEntity<ApiResult<List<AdminProductRowDto>>> list(
             @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "status", required = false) String statusStr) {
+            @RequestParam(value = "status", required = false) String statusStr,
+            @RequestParam(value = "provinceId", required = false) Long provinceId,
+            @RequestParam(value = "categoryId", required = false) Long categoryId) {
         // 筛选参数容错解析：无效状态值按“不过滤状态”处理。
         ProductStatus status = parseStatusParam(statusStr);
-        List<Product> products = productService.listForAdmin(keyword, status);
+        List<Product> products = productService.listForAdmin(keyword, status, provinceId, categoryId);
         // 批量映射首图，减少前端渲染时的额外计算。
         Map<Long, String> covers = productService.mapFirstImageStoredByProducts(products);
         List<AdminProductRowDto> rows = products.stream().map(p -> toRow(p, covers.get(p.getId()))).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResult.ok(rows));
+    }
+
+    /**
+     * 管理端省份筛选选项。
+     */
+    @GetMapping("/province-options")
+    public ResponseEntity<ApiResult<List<ProvinceOptionDto>>> provinceOptions() {
+        return ResponseEntity.ok(ApiResult.ok(productService.listAllProvinceOptions()));
+    }
+
+    /**
+     * 管理端分类筛选选项。
+     */
+    @GetMapping("/category-options")
+    public ResponseEntity<ApiResult<List<CategoryOptionDto>>> categoryOptions() {
+        return ResponseEntity.ok(ApiResult.ok(productService.listAllCategoryOptions()));
     }
 
     /**
@@ -69,6 +92,8 @@ public class AdminProductApiController {
         d.setPrice(p.getPrice());
         d.setStock(p.getStock());
         d.setStatus(p.getStatus() != null ? p.getStatus().name() : null);
+        d.setCategoryName(p.getCategoryName());
+        d.setProvinceName(p.getProvinceName());
         // 详情返回图片名列表，由前端统一拼接访问 URL。
         d.setImageNames(productService.splitStoredImageNames(p));
         return ResponseEntity.ok(ApiResult.ok(d));
@@ -80,12 +105,16 @@ public class AdminProductApiController {
     @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<ApiResult<Void>> delete(@PathVariable Long id) {
         try {
-            // 删除规则（必须下架等）由 service 统一校验。
+            // 管理员删除优先：不因关联业务阻断删除。
             productService.deleteProduct(id);
             return ResponseEntity.ok(ApiResult.<Void>ok());
         } catch (IllegalArgumentException e) {
             // 业务错误返回 400，给前端可读提示。
             String msg = e.getMessage() != null ? e.getMessage() : "删除失败";
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, msg));
+        } catch (Exception e) {
+            // 兜底处理数据库约束等运行时异常，避免前端只看到“删除失败”。
+            String msg = resolveDeleteErrorMessage(e);
             return ResponseEntity.badRequest().body(ApiResult.fail(400, msg));
         }
     }
@@ -120,6 +149,63 @@ public class AdminProductApiController {
     }
 
     /**
+     * 批量更新商品上下架状态。
+     */
+    @PatchMapping(value = "/batch-status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResult<Void>> batchUpdateStatus(@RequestBody AdminProductBatchRequest body) {
+        if (body == null || body.getStatus() == null || body.getStatus().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态无效"));
+        }
+        ProductStatus status;
+        try {
+            status = ProductStatus.valueOf(body.getStatus().trim().toUpperCase());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态无效"));
+        }
+        Set<Long> ids = normalizeIds(body.getIds());
+        if (ids.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, "请选择要操作的商品"));
+        }
+        List<String> failed = new java.util.ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                productService.updateStatus(id, status);
+            } catch (Exception e) {
+                String reason = e.getMessage() == null ? "未知原因" : e.getMessage();
+                failed.add(id + "(" + reason + ")");
+            }
+        }
+        if (!failed.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, "部分商品操作失败: " + String.join("，", failed)));
+        }
+        return ResponseEntity.ok(ApiResult.<Void>ok());
+    }
+
+    /**
+     * 批量删除商品（仅支持已下架商品）。
+     */
+    @DeleteMapping(value = "/batch", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResult<Void>> batchDelete(@RequestBody AdminProductBatchRequest body) {
+        Set<Long> ids = normalizeIds(body == null ? null : body.getIds());
+        if (ids.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, "请选择要删除的商品"));
+        }
+        List<String> failed = new java.util.ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                productService.deleteProduct(id);
+            } catch (Exception e) {
+                String reason = resolveDeleteErrorMessage(e);
+                failed.add(id + "(" + reason + ")");
+            }
+        }
+        if (!failed.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResult.fail(400, "部分商品删除失败: " + String.join("，", failed)));
+        }
+        return ResponseEntity.ok(ApiResult.<Void>ok());
+    }
+
+    /**
      * 解析列表筛选状态参数；非法值按未筛选处理。
      */
     private static ProductStatus parseStatusParam(String statusStr) {
@@ -135,6 +221,38 @@ public class AdminProductApiController {
         }
     }
 
+    private static Set<Long> normalizeIds(List<Long> ids) {
+        Set<Long> out = new LinkedHashSet<Long>();
+        if (ids == null) {
+            return out;
+        }
+        for (Long id : ids) {
+            if (id != null && id > 0) {
+                out.add(id);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 解析删除失败的可读原因，优先给出业务可理解提示。
+     */
+    private static String resolveDeleteErrorMessage(Throwable e) {
+        Throwable cur = e;
+        while (cur != null) {
+            String cls = cur.getClass().getName();
+            String msg = cur.getMessage();
+            if (cls.contains("DataIntegrityViolation")
+                    || cls.contains("SQLIntegrityConstraintViolationException")
+                    || cls.contains("ConstraintViolationException")
+                    || (msg != null && (msg.contains("foreign key") || msg.contains("a foreign key constraint fails")))) {
+                return "删除失败，请稍后重试";
+            }
+            cur = cur.getCause();
+        }
+        return e.getMessage() != null ? e.getMessage() : "删除失败";
+    }
+
     /**
      * 将商品实体映射为管理端列表行 DTO。
      */
@@ -147,6 +265,8 @@ public class AdminProductApiController {
         d.setStock(p.getStock());
         // status 允许为空，前端可显示为“未知”。
         d.setStatus(p.getStatus() != null ? p.getStatus().name() : null);
+        d.setCategoryName(p.getCategoryName());
+        d.setProvinceName(p.getProvinceName());
         // 首图文件名由外部映射传入。
         d.setCoverStoredName(coverStoredName);
         return d;

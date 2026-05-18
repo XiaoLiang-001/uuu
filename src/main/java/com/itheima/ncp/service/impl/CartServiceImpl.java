@@ -1,5 +1,7 @@
 package com.itheima.ncp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.itheima.ncp.dto.CartLineDto;
 import com.itheima.ncp.entity.product.Product;
 import com.itheima.ncp.entity.product.ProductStatus;
@@ -36,7 +38,9 @@ public class CartServiceImpl implements CartService {
     @Override
     public List<CartLineDto> listLines(Long userId) {
         // 读取当前用户全部购物车记录（数据库原始行）。
-        List<CartItem> rows = cartItemMapper.findByUserId(userId);
+        List<CartItem> rows = cartItemMapper.selectList(new QueryWrapper<CartItem>()
+                .eq("user_id", userId)
+                .orderByDesc("id"));
         // 最终返回给前端展示的数据集合。
         List<CartLineDto> out = new ArrayList<CartLineDto>();
         // 逐条转换购物车记录 -> 展示 DTO。
@@ -45,6 +49,10 @@ public class CartServiceImpl implements CartService {
             Product p = productMapper.findById(row.getProductId());
             // 商品不存在或已下架时，不再展示该条目。
             if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
+                // 同步清理失效条目，避免结算时仍被读取到。
+                cartItemMapper.delete(new QueryWrapper<CartItem>()
+                        .eq("id", row.getId())
+                        .eq("user_id", userId));
                 continue;
             }
             // 构建购物车展示行。
@@ -68,10 +76,15 @@ public class CartServiceImpl implements CartService {
                 q = stock;
                 // 有库存时回写数据库，保持购物车数量与库存一致。
                 if (q > 0) {
-                    cartItemMapper.updateQuantity(row.getId(), q);
+                    cartItemMapper.update(null, new UpdateWrapper<CartItem>()
+                            .set("quantity", q)
+                            .setSql("updated_at = CURRENT_TIMESTAMP")
+                            .eq("id", row.getId()));
                 } else {
                     // 已无库存则删除该条购物车项。
-                    cartItemMapper.deleteByIdAndUserId(row.getId(), userId);
+                    cartItemMapper.delete(new QueryWrapper<CartItem>()
+                            .eq("id", row.getId())
+                            .eq("user_id", userId));
                     continue;
                 }
             }
@@ -144,12 +157,15 @@ public class CartServiceImpl implements CartService {
         // 校验商品是否存在且可售。
         Product p = productMapper.findById(productId);
         if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
-            throw new IllegalArgumentException("商品不可购买");
+            throw new IllegalArgumentException("商品已下架或已删除，无法购买");
         }
         // 读取可用库存。
         int stock = p.getStock() != null ? p.getStock() : 0;
         // 查找购物车中是否已存在该商品。
-        CartItem existing = cartItemMapper.findByUserIdAndProductId(userId, productId);
+        CartItem existing = cartItemMapper.selectOne(new QueryWrapper<CartItem>()
+                .eq("user_id", userId)
+                .eq("product_id", productId)
+                .last("LIMIT 1"));
         // 默认新增数量。
         int newQty = quantity;
         // 已存在则累加数量。
@@ -159,6 +175,10 @@ public class CartServiceImpl implements CartService {
         // 超库存时按库存上限截断。
         if (newQty > stock) {
             newQty = stock;
+        }
+        // 已在库存上限时，再次加购不会产生变化，明确提示前端。
+        if (existing != null && existing.getQuantity() != null && newQty <= existing.getQuantity()) {
+            throw new IllegalArgumentException("已达到库存上限，无法继续增加");
         }
         // 截断后若不足 1，说明无可售库存。
         if (newQty < 1) {
@@ -172,7 +192,10 @@ public class CartServiceImpl implements CartService {
             row.setQuantity(newQty);
             cartItemMapper.insert(row);
         } else {
-            cartItemMapper.updateQuantity(existing.getId(), newQty);
+            cartItemMapper.update(null, new UpdateWrapper<CartItem>()
+                    .set("quantity", newQty)
+                    .setSql("updated_at = CURRENT_TIMESTAMP")
+                    .eq("id", existing.getId()));
         }
     }
 
@@ -188,7 +211,9 @@ public class CartServiceImpl implements CartService {
         }
         // 从当前用户购物车中定位目标条目，避免越权修改他人条目。
         CartItem row = null;
-        for (CartItem c : cartItemMapper.findByUserId(userId)) {
+        for (CartItem c : cartItemMapper.selectList(new QueryWrapper<CartItem>()
+                .eq("user_id", userId)
+                .orderByDesc("id"))) {
             if (c.getId().equals(cartItemId)) {
                 row = c;
                 break;
@@ -202,19 +227,27 @@ public class CartServiceImpl implements CartService {
         Product p = productMapper.findById(row.getProductId());
         if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
             // 已下架商品从购物车移除，并提示用户。
-            cartItemMapper.deleteByIdAndUserId(cartItemId, userId);
-            throw new IllegalArgumentException("商品已下架，已从购物车移除");
+            cartItemMapper.delete(new QueryWrapper<CartItem>()
+                    .eq("id", cartItemId)
+                    .eq("user_id", userId));
+            throw new IllegalArgumentException("商品已下架或已删除，已从购物车移除");
         }
         // 按库存上限裁剪目标数量。
         int stock = p.getStock() != null ? p.getStock() : 0;
         int q = Math.min(quantity, stock);
         // 库存不足到 0 时移除该项。
         if (q < 1) {
-            cartItemMapper.deleteByIdAndUserId(cartItemId, userId);
+            cartItemMapper.delete(new QueryWrapper<CartItem>()
+                    .eq("id", cartItemId)
+                    .eq("user_id", userId));
             throw new IllegalArgumentException("库存不足");
         }
         // 持久化更新数量。
-        cartItemMapper.updateQuantity(cartItemId, q);
+        cartItemMapper.update(null, new UpdateWrapper<CartItem>()
+                .set("quantity", q)
+                .setSql("updated_at = CURRENT_TIMESTAMP")
+                .eq("id", cartItemId)
+                .eq("user_id", userId));
     }
 
     /**
@@ -224,7 +257,9 @@ public class CartServiceImpl implements CartService {
     @Transactional(rollbackFor = Exception.class)
     public void removeLine(Long userId, long cartItemId) {
         // 按 userId + cartItemId 双条件删除，防止误删他人数据。
-        int n = cartItemMapper.deleteByIdAndUserId(cartItemId, userId);
+        int n = cartItemMapper.delete(new QueryWrapper<CartItem>()
+                .eq("id", cartItemId)
+                .eq("user_id", userId));
         // 删除行数为 0 说明条目不存在或不属于当前用户。
         if (n == 0) {
             throw new IllegalArgumentException("购物车项不存在");
@@ -238,6 +273,6 @@ public class CartServiceImpl implements CartService {
     @Transactional(rollbackFor = Exception.class)
     public void clearCart(Long userId) {
         // 清理当前用户所有购物车数据，常用于下单成功后。
-        cartItemMapper.deleteByUserId(userId);
+        cartItemMapper.delete(new QueryWrapper<CartItem>().eq("user_id", userId));
     }
 }

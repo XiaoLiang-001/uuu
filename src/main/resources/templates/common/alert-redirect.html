@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>处理中...</title>
+</head>
+<body>
+<p id="redirectFlashMsg" class="js-flash-alert" data-alert-mode="always" hidden th:text="${msg}">操作完成</p>
+<script th:src="@{/js/flash-alert.js}"></script>
+<script th:inline="javascript">
+    (function () {
+        var redirectUrl = /*[[${redirectUrl}]]*/ '/';
+        // 提示由 flash-alert.js 自动 flush，避免重复弹窗。
+        window.location.replace(redirectUrl);
+    })();
+</script>
+</body>
+</html>

@@ -15,15 +15,14 @@
             <a th:href="@{/user/profile}">用户中心</a>
         </nav>
         <form th:action="@{/logout}" method="post" class="inline">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <button type="submit" class="btn ghost market-logout">退出</button>
         </form>
     </div>
 </header>
 <main class="market-detail">
     <h1>我的订单</h1>
-    <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
-    <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+    <p th:if="${msg}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${msg}">提示</p>
+    <p th:if="${err}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${err}">错误</p>
 
     <div th:if="${#lists.isEmpty(orders)}" class="muted">暂无订单。</div>
 
@@ -67,5 +66,6 @@
         </article>
     </section>
 </main>
+<script th:src="@{/js/flash-alert.js}"></script>
 </body>
 </html>

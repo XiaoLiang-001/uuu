@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>确认订单 · 农家优品</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
 </head>
@@ -14,7 +16,6 @@
             <a th:href="@{/user/market}">集市</a>
         </nav>
         <form th:action="@{/logout}" method="post" class="inline">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <button type="submit" class="btn ghost market-logout">退出</button>
         </form>
     </div>
@@ -22,7 +23,7 @@
 <main class="market-detail">
     <h1>确认订单</h1>
 
-    <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+    <p th:if="${err}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${err}">错误</p>
 
     <section class="checkout-items">
         <h2 class="checkout-section-title">商品清单</h2>
@@ -49,7 +50,6 @@
     <section class="checkout-form-card">
         <h2 class="checkout-section-title">收货信息</h2>
         <form th:action="@{/user/orders}" method="post" class="checkout-form">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <label class="checkout-form-field">
                 <span>收货人</span>
                 <input type="text" name="receiverName" required="required" maxlength="64" placeholder="请输入收货人姓名"/>
@@ -67,5 +67,74 @@
         </form>
     </section>
 </main>
+<script th:src="@{/plugins/axios/axios.min.js}"></script>
+<script th:src="@{/js/flash-alert.js}"></script>
+<script>
+    (function () {
+        if (typeof axios === 'undefined') {
+            return;
+        }
+        var csrf = document.querySelector('meta[name="_csrf"]');
+        var csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+        if (csrf && csrfHeader) {
+            axios.defaults.headers.common[csrfHeader.getAttribute('content')] = csrf.getAttribute('content');
+        }
+
+        function showMsg(msg) {
+            if (window.NcpFlashAlert && window.NcpFlashAlert.show) {
+                window.NcpFlashAlert.show(msg, 'top-or-user-shell');
+            } else {
+                window.alert(msg);
+            }
+        }
+
+        var form = document.querySelector('.checkout-form');
+        if (!form) {
+            return;
+        }
+        var submitBtn = form.querySelector('.checkout-submit-btn');
+        var submitting = false;
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            if (submitting) {
+                return;
+            }
+            submitting = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '提交中...';
+            }
+            var receiverName = ((form.querySelector('input[name="receiverName"]') || {}).value || '').trim();
+            var receiverPhone = ((form.querySelector('input[name="receiverPhone"]') || {}).value || '').trim();
+            var receiverAddress = ((form.querySelector('textarea[name="receiverAddress"]') || {}).value || '').trim();
+            axios.post('/api/user/orders', {
+                receiverName: receiverName,
+                receiverPhone: receiverPhone,
+                receiverAddress: receiverAddress
+            }).then(function (res) {
+                var body = res.data || {};
+                if (body.code !== 200) {
+                    throw { message: body.message || '下单失败' };
+                }
+                showMsg('订单已提交');
+                var orderId = body.data;
+                if (orderId) {
+                    window.location.href = '/user/orders/' + orderId;
+                } else {
+                    window.location.href = '/user/orders';
+                }
+            }).catch(function (e) {
+                var msg = (e.response && e.response.data && e.response.data.message)
+                        || e.message || '下单失败';
+                showMsg(msg);
+                submitting = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '提交订单';
+                }
+            });
+        });
+    })();
+</script>
 </body>
 </html>

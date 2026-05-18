@@ -403,10 +403,12 @@
                                     <span>{{ scope.row.status === 1 ? '启用' : '禁用' }}</span>
                                     <el-button-group v-if="isOrdinaryUser(scope.row)" style="margin-left:8px;">
                                         <el-button size="mini" type="success" plain
-                                                   :disabled="scope.row.status === 1"
+                                                   :loading="isRowActionBusy(scope.row.id, 'status')"
+                                                   :disabled="scope.row.status === 1 || isRowActionBusy(scope.row.id, 'status') || isRowActionBusy(scope.row.id, 'delete')"
                                                    @click="setStatus(scope.row, 1)">启用</el-button>
                                         <el-button size="mini" type="danger" plain
-                                                   :disabled="scope.row.status === 0 || isSelf(scope.row)"
+                                                   :loading="isRowActionBusy(scope.row.id, 'status')"
+                                                   :disabled="scope.row.status === 0 || isSelf(scope.row) || isRowActionBusy(scope.row.id, 'status') || isRowActionBusy(scope.row.id, 'delete')"
                                                    @click="setStatus(scope.row, 0)">禁用</el-button>
                                     </el-button-group>
                                     <span v-else class="admin-users-no-ops">（不可操作）</span>
@@ -416,7 +418,8 @@
                                 <template slot-scope="scope">
                                     <template v-if="isOrdinaryUser(scope.row)">
                                         <el-button type="text" size="mini" style="color:#c45656;"
-                                                   :disabled="isSelf(scope.row)"
+                                                   :loading="isRowActionBusy(scope.row.id, 'delete')"
+                                                   :disabled="isSelf(scope.row) || isRowActionBusy(scope.row.id, 'delete') || isRowActionBusy(scope.row.id, 'status')"
                                                    @click="confirmDelete(scope.row)">删除</el-button>
                                     </template>
                                     <span v-else class="admin-users-no-ops">—</span>
@@ -509,6 +512,7 @@
                 currentPage: 1,
                 pageSize: 10,
                 loading: false,
+                rowActionBusy: {},
                 emptyText: '暂无用户数据。',
                 tableHeight: calcTableHeight(),
                 currentUsername: CURRENT_USER || '',
@@ -554,6 +558,17 @@
                 if (r === 'ADMIN') return '管理员';
                 if (r === 'USER') return '普通用户';
                 return r || '—';
+            },
+            rowActionKey: function (id, action) {
+                return String(id) + ':' + String(action || '');
+            },
+            isRowActionBusy: function (id, action) {
+                var key = this.rowActionKey(id, action);
+                return !!this.rowActionBusy[key];
+            },
+            setRowActionBusy: function (id, action, busy) {
+                var key = this.rowActionKey(id, action);
+                this.$set(this.rowActionBusy, key, !!busy);
             },
             load: function () {
                 var vm = this;
@@ -607,6 +622,10 @@
             },
             setStatus: function (row, st) {
                 var vm = this;
+                if (vm.isRowActionBusy(row.id, 'status') || vm.isRowActionBusy(row.id, 'delete')) {
+                    return;
+                }
+                vm.setRowActionBusy(row.id, 'status', true);
                 axios.patch(API + '/' + row.id + '/status', { status: st })
                     .then(function (res) {
                         var b = res.data
@@ -621,6 +640,9 @@
                     })
                     .catch(function (e) {
                         vm.showErr(e, '操作失败');
+                    })
+                    .finally(function () {
+                        vm.setRowActionBusy(row.id, 'status', false);
                     });
             },
             resetForm: function () {
@@ -685,11 +707,13 @@
             confirmDelete: function (row) {
                 var vm = this;
                 if (!vm.isOrdinaryUser(row) || vm.isSelf(row)) return;
+                if (vm.isRowActionBusy(row.id, 'delete') || vm.isRowActionBusy(row.id, 'status')) return;
                 vm.$confirm('确定删除用户「' + row.username + '」吗？此操作不可恢复。', '删除确认', {
                     confirmButtonText: '删除',
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(function () {
+                    vm.setRowActionBusy(row.id, 'delete', true);
                     return axios.delete(API + '/' + row.id);
                 }).then(function () {
                     vm.load();
@@ -697,6 +721,8 @@
                 }).catch(function (e) {
                     if (e === 'cancel') return;
                     vm.showErr(e, '删除失败');
+                }).finally(function () {
+                    vm.setRowActionBusy(row.id, 'delete', false);
                 });
             }
         }

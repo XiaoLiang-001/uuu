@@ -15,6 +15,15 @@ public interface ProductReviewService {
     /** 查询商品评价列表。 */
     List<ProductReview> listByProductId(Long productId);
 
+    /** 查询用户自己的评价列表。 */
+    List<ProductReview> listByUserId(Long userId);
+
     /** 提交商品评价。 */
     void addReview(long productId, Long userId, String loginUsername, String content, Integer rating);
+
+    /** 修改自己的评价。 */
+    void updateReview(Long reviewId, Long userId, String content, Integer rating);
+
+    /** 删除自己的评价。 */
+    void deleteReview(Long reviewId, Long userId);
 }

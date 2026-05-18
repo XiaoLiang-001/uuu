@@ -3,9 +3,9 @@ package com.itheima.ncp.controller;
 import com.itheima.ncp.common.ApiResult;
 import com.itheima.ncp.entity.user.UserRole;
 import com.itheima.ncp.dto.AdminUserCreateRequest;
+import com.itheima.ncp.dto.AdminUserUpdateRequest;
 import com.itheima.ncp.dto.AdminUserRowDto;
 import com.itheima.ncp.dto.AdminUserStatusRequest;
-import com.itheima.ncp.dto.AdminUserUpdateRequest;
 import com.itheima.ncp.service.user.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 管理端用户 REST API，提供列表、新增、状态更新与删除能力。
+ * 管理端用户 REST API，提供列表、新增、编辑、单条查询、状态更新与删除能力。
  */
 @RestController
 @RequestMapping("/api/admin/users")
@@ -97,7 +97,7 @@ public class AdminUserApiController {
     }
 
     /**
-     * 保存编辑：与前端使用 JSON 体（application/json），避免 iframe+form-urlencoded 下 @RequestParam 不绑定问题。
+     * 保存编辑：JSON 体（application/json）。
      */
     @PatchMapping(value = "/{id:\\d+}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResult<Void>> update(
@@ -115,11 +115,9 @@ public class AdminUserApiController {
             String password = body.getPassword();
             String oldPassword = body.getOldPassword();
             Integer statusRaw = body.getStatus();
-            // 这里强制要求 status，避免“前端漏传导致状态被误改”。
             if (statusRaw == null) {
                 return ResponseEntity.badRequest().body(ApiResult.fail(400, "状态不能为空"));
             }
-            // 调用 service 执行用户资料更新。
             userService.updateByAdmin(id, username, password, oldPassword, statusRaw, principal.getUsername());
             return ResponseEntity.ok(ApiResult.<Void>ok());
         } catch (IllegalArgumentException e) {

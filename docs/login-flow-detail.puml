@@ -1,0 +1,38 @@
+@startuml
+title 农家优品 登录流程(详细)
+
+start
+
+:GET /login;
+:login.html;
+:POST /login;
+
+:Spring Security;
+:UserDetailsServiceImpl;
+
+if (user exists) then (yes)
+else (no)
+  :/login?error;
+  stop
+endif
+
+if (account enabled) then (yes)
+else (no)
+  :/login?disabled;
+  stop
+endif
+
+:FlexiblePasswordEncoder;
+
+if (password ok) then (yes)
+else (no)
+  :/login?error;
+  stop
+endif
+
+:Session;
+:/;
+
+stop
+
+@enduml

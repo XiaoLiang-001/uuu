@@ -1,5 +1,6 @@
 package com.itheima.ncp.entity.user;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@TableName("sys_user")
 public class User {
 
     /** 禁用状态码。 */

@@ -859,6 +859,22 @@ a.market-pag-btn:active {
     border-color: rgba(70, 130, 65, 0.35);
 }
 
+.market-chip-off {
+    color: #7a4b20;
+    background: rgba(240, 196, 135, 0.2);
+    border-color: rgba(186, 123, 53, 0.35);
+}
+
+.market-detail-offshelf-tip {
+    margin: 10px 0 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(186, 123, 53, 0.35);
+    background: rgba(255, 243, 224, 0.9);
+    color: #7a4b20;
+    font-size: 13px;
+}
+
 .market-detail-meta {
     margin: 0 0 22px;
     padding: 14px 0 18px;
@@ -2348,30 +2364,30 @@ body.admin-landing {
 .admin-sidebar-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 4px 6px 6px;
+    gap: 12px;
+    padding: 6px 6px 8px;
 }
 
 .admin-sidebar-logo {
-    font-size: 1.6rem;
+    font-size: 2.05rem;
     line-height: 1;
 }
 
 .admin-sidebar-brand-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
 }
 
 .admin-sidebar-brand-text strong {
     color: #2d4a2e;
-    font-size: 1rem;
+    font-size: 1.22rem;
     letter-spacing: 0.04em;
 }
 
 .admin-sidebar-brand-text span {
     color: #6b7d62;
-    font-size: 0.76rem;
+    font-size: 0.92rem;
     letter-spacing: 0.1em;
 }
 
@@ -2865,6 +2881,281 @@ body.admin-landing {
     margin: 0 0 14px;
 }
 
+/* 编辑资料：说明与分区，降低信息堆叠感 */
+.user-center-edit-lead {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(61, 85, 52, 0.9);
+    margin: 0 0 16px;
+}
+
+/* 编辑信息页：整页舒展 + 双列表单，字号与间距偏饱满 */
+body.user-center-edit-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+body.user-center-edit-page .landing-topbar {
+    padding: 12px 20px;
+}
+
+body.user-center-edit-page .landing-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 20px 20px 32px;
+    max-width: 920px;
+}
+
+body.user-center-edit-page .user-center-panel {
+    margin-bottom: 0;
+    padding: 22px 24px 24px;
+}
+
+body.user-center-edit-page .landing-footer-copy {
+    margin: 0;
+    padding: 8px 16px 14px;
+    font-size: 0.8rem;
+    opacity: 0.9;
+    flex: 0 0 auto;
+}
+
+body.user-center-edit-page .user-center-edit-kicker {
+    margin: 0 0 8px;
+    letter-spacing: 0.3em;
+}
+
+body.user-center-edit-page .user-center-panel-title,
+body.user-center-edit-page .user-center-edit-title {
+    margin: 0 0 8px;
+    font-size: clamp(1.12rem, 2.4vw, 1.32rem);
+    line-height: 1.3;
+    font-weight: 800;
+}
+
+body.user-center-edit-page .user-center-edit-summary,
+.user-center-edit-summary {
+    margin: 0 0 20px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(50, 72, 45, 0.9);
+    max-width: 42em;
+}
+
+/* 双列：左登录名、右当前密码；下方新/确认并排 */
+.user-center-edit-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+    align-items: start;
+}
+
+.user-center-edit-cols .user-center-edit-section {
+    margin-bottom: 0;
+}
+
+body.user-center-edit-page .user-center-edit-form--one-screen {
+    gap: 14px;
+}
+
+body.user-center-edit-page .user-center-edit-hint {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin: 0 0 4px;
+}
+
+body.user-center-edit-page .user-center-field {
+    gap: 2px;
+}
+
+body.user-center-edit-page .user-center-edit-form fieldset.user-center-edit-section {
+    margin: 0 0 8px;
+    padding: 12px 14px 16px;
+    border-radius: 12px;
+}
+
+body.user-center-edit-page .user-center-edit-section--password {
+    margin-top: 4px !important;
+    padding: 12px 16px 16px;
+}
+
+body.user-center-edit-page .user-center-edit-section .user-center-edit-cols--password,
+.user-center-edit-cols--password {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+body.user-center-edit-page .user-center-edit-section--password {
+    min-width: 0;
+}
+
+body.user-center-edit-page .user-center-edit-section legend {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+    width: 100%;
+    padding-bottom: 0;
+}
+
+body.user-center-edit-page .user-center-edit-label {
+    font-size: 0.86rem;
+    margin: 0;
+    padding: 0;
+}
+
+body.user-center-edit-page .user-center-edit-input {
+    padding: 10px 12px;
+    font-size: 0.92rem;
+    border-radius: 12px;
+    min-height: 44px;
+}
+
+body.user-center-edit-page .user-center-edit-input.is-invalid {
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.18);
+}
+
+body.user-center-edit-page .user-center-edit-error {
+    min-height: 1.25rem;
+    margin: 0;
+    line-height: 1.35;
+    font-size: 0.84rem;
+}
+
+body.user-center-edit-page .user-center-edit-actions {
+    margin-top: 4px;
+    padding-top: 4px;
+    gap: 12px;
+}
+
+body.user-center-edit-page .user-center-edit-actions .btn-landing,
+body.user-center-edit-page .user-center-nav .btn-landing {
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    border-radius: 12px;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+body.user-center-edit-page .user-center-save-btn {
+    margin-top: 0;
+}
+
+body.user-center-edit-page .user-shop-alert {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+/* 窄屏回退单列 */
+@media (max-width: 560px) {
+    .user-center-edit-cols,
+    .user-center-edit-cols--password {
+        grid-template-columns: 1fr;
+    }
+
+    body.user-center-edit-page .user-center-panel {
+        padding: 18px 16px 20px;
+    }
+}
+
+@media (max-height: 640px) {
+    body.user-center-edit-page .landing-main {
+        overflow-y: auto;
+    }
+}
+
+.user-center-edit-notice {
+    margin: 0 0 24px;
+    padding: 14px 16px 14px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 252, 240, 0.95) 0%, rgba(240, 248, 234, 0.88) 100%);
+    border: 1px solid rgba(170, 198, 155, 0.45);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+.user-center-edit-notice-title {
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5f7f54;
+}
+
+.user-center-edit-notice ol {
+    margin: 0;
+    padding-left: 1.2em;
+    color: #3d4f36;
+    font-size: 0.88rem;
+    line-height: 1.65;
+}
+
+.user-center-edit-notice li {
+    margin-bottom: 6px;
+}
+
+.user-center-edit-notice li:last-child {
+    margin-bottom: 0;
+}
+
+.user-center-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.user-center-edit-hint {
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: rgba(77, 104, 67, 0.75);
+}
+
+.user-center-edit-hint--tight {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.user-center-edit-form fieldset.user-center-edit-section {
+    border: 1px solid rgba(170, 198, 155, 0.42);
+    border-radius: 12px;
+    margin: 0 0 18px;
+    padding: 14px 14px 16px;
+    background: rgba(255, 255, 255, 0.45);
+    min-width: 0;
+}
+
+.user-center-edit-form fieldset.user-center-edit-section--password {
+    background: rgba(251, 254, 248, 0.65);
+}
+
+.user-center-edit-section legend {
+    float: none;
+    width: auto;
+    margin: 0 0 10px;
+    padding: 0 6px 0 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #4d6d43;
+    border: none;
+}
+
+.user-center-edit-section .user-center-field + .user-center-field {
+    margin-top: 10px;
+}
+
+.user-center-edit-legend-note {
+    font-weight: 500;
+    color: rgba(95, 127, 84, 0.85);
+    font-size: 0.82em;
+}
+
 .user-center-edit-form {
     display: grid;
     gap: 10px;
@@ -2980,14 +3271,6 @@ body.admin-landing {
     margin-bottom: 10px;
 }
 
-.user-center-edit-page .user-center-main {
-    max-width: 760px;
-}
-
-.user-center-edit-page .user-center-panel {
-    padding: 24px 26px;
-}
-
 @media (max-width: 520px) {
     .user-center-row {
         grid-template-columns: 1fr;
@@ -3092,6 +3375,308 @@ body.admin-landing {
     50% { transform: translateY(-6px); }
 }
 
+.market-filter-form {
+    margin: 10px 0 20px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(120, 150, 100, 0.22);
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px 14px;
+}
+
+.market-category-filter-wrap {
+    margin: 10px 0 0;
+    padding: 9px 12px 8px;
+    border-radius: 14px;
+    border: 1px solid rgba(120, 150, 100, 0.22);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 250, 241, 0.92) 100%);
+    box-shadow: 0 4px 12px rgba(50, 80, 40, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.market-category-filter-sticky {
+    position: sticky;
+    top: 6px;
+    z-index: 24;
+}
+
+.market-category-filter-head {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr);
+    align-items: stretch;
+    gap: 9px;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed rgba(120, 150, 100, 0.26);
+}
+
+.market-category-filter-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-right: 10px;
+    border-right: 1px solid rgba(120, 150, 100, 0.22);
+}
+
+.market-category-filter-title {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #2d4a2e;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.market-category-filter-title::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #5f9250;
+    box-shadow: 0 0 0 3px rgba(95, 146, 80, 0.16);
+}
+
+.market-category-filter-sub {
+    margin: 3px 0 0;
+    font-size: 0.74rem;
+    color: #607258;
+    line-height: 1.35;
+}
+
+.market-quick-intro {
+    margin-left: 0;
+    max-width: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    text-align: right;
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(120, 150, 100, 0.18);
+}
+
+.market-quick-intro-main {
+    min-width: 210px;
+}
+
+.market-quick-intro .market-kicker {
+    margin: 0 0 1px;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+}
+
+.market-quick-intro .market-title {
+    margin: 0 0 2px;
+    font-size: 0.98rem;
+}
+
+.market-quick-intro .market-sub {
+    margin: 0 0 4px;
+    max-width: none;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.market-quick-intro .market-tags {
+    justify-content: flex-end;
+}
+
+.market-quick-intro .market-tags li {
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    border-radius: 999px;
+    background: rgba(107, 154, 92, 0.12);
+}
+
+.market-quick-intro-emoji {
+    font-size: 1.95rem;
+    line-height: 1;
+    filter: drop-shadow(0 4px 10px rgba(60, 100, 50, 0.15));
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(234, 245, 229, 0.9));
+    border: 1px solid rgba(120, 150, 100, 0.22);
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 980px) {
+    .market-category-filter-head {
+        grid-template-columns: 1fr;
+    }
+
+    .market-category-filter-left {
+        border-right: none;
+        padding-right: 0;
+    }
+
+    .market-quick-intro {
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .market-quick-intro .market-tags {
+        justify-content: flex-start;
+    }
+}
+
+.market-category-filter {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 1px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 150, 100, 0.45) transparent;
+}
+
+.market-province-filter {
+    margin-bottom: 0;
+}
+
+.market-quick-filter-group + .market-quick-filter-group {
+    margin-top: 5px;
+}
+
+.market-quick-filter-label {
+    margin: 0 0 3px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #3d5c38;
+    letter-spacing: 0.04em;
+}
+
+.market-quick-filter-group {
+    padding: 5px 6px 5px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.42);
+}
+
+.market-category-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 29px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #355d2f;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(120, 150, 100, 0.35);
+    box-shadow: 0 2px 8px rgba(60, 100, 50, 0.09);
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+.market-category-chip:hover {
+    color: #2d5a28;
+    border-color: rgba(90, 140, 80, 0.55);
+    background: rgba(248, 252, 246, 0.98);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(60, 100, 50, 0.16);
+}
+
+.market-category-chip.is-active {
+    color: #fff;
+    background: linear-gradient(135deg, #6aa95a 0%, #4a7c3f 55%, #3d6b35 100%);
+    border-color: #3f6f35;
+    box-shadow: 0 8px 18px rgba(61, 122, 53, 0.3);
+    position: relative;
+}
+
+.market-category-chip.is-active::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -4px;
+    height: 2px;
+    border-radius: 99px;
+    background: rgba(61, 122, 53, 0.5);
+}
+
+.market-province-chip {
+    border-color: rgba(110, 140, 180, 0.35);
+    color: #2f587f;
+}
+
+.market-province-chip:hover {
+    border-color: rgba(90, 120, 165, 0.5);
+    color: #23496b;
+    box-shadow: 0 6px 14px rgba(70, 105, 150, 0.16);
+}
+
+.market-province-chip.is-active {
+    background: linear-gradient(135deg, #5f8fc7 0%, #456da8 55%, #36598d 100%);
+    border-color: #325486;
+    box-shadow: 0 8px 18px rgba(70, 105, 150, 0.28);
+}
+
+.market-province-chip.is-active::after {
+    background: rgba(70, 105, 150, 0.48);
+}
+
+.market-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+}
+
+.market-filter-field > span {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4d6d43;
+}
+
+.market-filter-field input,
+.market-filter-field select {
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(120, 150, 100, 0.4);
+    padding: 0 10px;
+    font-size: 0.9rem;
+    background: #fff;
+    color: #2c3e2d;
+}
+
+.market-filter-field input:focus,
+.market-filter-field select:focus {
+    outline: none;
+    border-color: #6b9a5c;
+    box-shadow: 0 0 0 3px rgba(107, 154, 92, 0.2);
+}
+
+.market-filter-btn {
+    margin-top: 0;
+    min-height: 38px;
+    padding: 8px 16px;
+}
+
+.market-card-origin {
+    margin: 0 18px 2px;
+    color: #5a6b52;
+    font-size: 0.86rem;
+}
+
 .market-logout {
     margin-top: 0;
 }
@@ -3123,12 +3708,12 @@ body.admin-product-form-agri {
 .product-form-topbar {
     background: rgba(255, 255, 255, 0.9);
     border-bottom: 1px solid rgba(100, 130, 85, 0.28);
-    padding: 12px 18px;
+    padding: 10px 18px;
     backdrop-filter: blur(8px);
 }
 
 .product-form-topbar-inner {
-    max-width: 720px;
+    max-width: 960px;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -3185,9 +3770,9 @@ body.admin-product-form-agri {
 }
 
 .product-form-main {
-    max-width: 640px;
+    max-width: 920px;
     margin: 0 auto;
-    padding: 26px 20px 48px;
+    padding: 18px 22px 36px;
 }
 
 .product-edit-main {
@@ -3199,15 +3784,15 @@ body.admin-product-form-agri {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(120, 150, 100, 0.25);
     border-radius: 18px;
-    padding: 24px 22px 26px;
+    padding: 18px 26px 22px;
     box-shadow:
         0 4px 24px rgba(60, 90, 50, 0.1),
         0 20px 48px rgba(40, 70, 35, 0.08);
 }
 
 .product-form-card > h1 {
-    margin: 0 0 16px;
-    font-size: 1.3rem;
+    margin: 0 0 12px;
+    font-size: 1.28rem;
     color: #2d4a2e;
     font-weight: 700;
 }
@@ -3221,7 +3806,7 @@ body.admin-product-form-agri {
 
 .product-form-card label {
     display: block;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     font-size: 0.82rem;
     color: #4a5c44;
     font-weight: 500;
@@ -3232,8 +3817,8 @@ body.admin-product-form-agri {
 .product-form-card select,
 .product-form-card textarea {
     width: 100%;
-    margin-top: 6px;
-    padding: 11px 14px;
+    margin-top: 5px;
+    padding: 9px 12px;
     border-radius: 12px;
     border: 1px solid rgba(100, 130, 85, 0.35);
     background: rgba(255, 255, 255, 0.98);
@@ -3244,15 +3829,15 @@ body.admin-product-form-agri {
 }
 
 .product-form-card textarea {
-    min-height: 120px;
+    min-height: 88px;
     resize: vertical;
-    line-height: 1.5;
+    line-height: 1.45;
 }
 
 .product-form-card input[type="file"] {
     width: 100%;
-    margin-top: 8px;
-    padding: 10px 12px;
+    margin-top: 6px;
+    padding: 8px 10px;
     border-radius: 12px;
     border: 1px dashed rgba(100, 130, 85, 0.45);
     background: rgba(255, 255, 255, 0.85);
@@ -3277,8 +3862,8 @@ body.admin-product-form-agri {
 .product-form-submit-btn {
     display: block;
     width: 100%;
-    margin-top: 22px;
-    padding: 12px 16px;
+    margin-top: 14px;
+    padding: 11px 16px;
     border: none;
     border-radius: 12px;
     font-size: 1rem;
@@ -3328,8 +3913,14 @@ body.admin-product-form-agri {
     gap: 10px 12px;
 }
 
+.product-edit-grid-three {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 12px;
+}
+
 .product-edit-status-field {
-    max-width: 240px;
+    max-width: none;
 }
 
 .product-edit-hint {
@@ -3459,6 +4050,10 @@ body.admin-product-form-agri {
     }
 
     .product-edit-grid-two {
+        grid-template-columns: 1fr;
+    }
+
+    .product-edit-grid-three {
         grid-template-columns: 1fr;
     }
 

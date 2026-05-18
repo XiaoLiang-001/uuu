@@ -1,0 +1,38 @@
+@startuml
+title NCP Login Flow
+
+start
+
+:GET /login;
+:Show login.html;
+:POST /login;
+
+:Spring Security filter;
+:UserDetailsServiceImpl load user;
+
+if (User exists?) then (yes)
+else (no)
+  :Redirect /login?error;
+  stop
+endif
+
+if (Account enabled?) then (yes)
+else (no)
+  :Redirect /login?disabled;
+  stop
+endif
+
+:FlexiblePasswordEncoder verify;
+
+if (Password OK?) then (yes)
+else (no)
+  :Redirect /login?error;
+  stop
+endif
+
+:Save SecurityContext to Session;
+:Redirect to /;
+
+stop
+
+@enduml

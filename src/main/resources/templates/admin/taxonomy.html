@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>分类管理 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/plugins/element-ui/index.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        .taxonomy-page .admin-users-main-inner {
+            gap: 8px;
+        }
+        .taxonomy-grid {
+            margin-top: 2px;
+        }
+        .taxonomy-card.el-card {
+            border-radius: 16px !important;
+            border: 1px solid rgba(120, 150, 100, 0.28) !important;
+            background: rgba(255, 255, 255, 0.94) !important;
+            box-shadow: 0 4px 24px rgba(60, 90, 50, 0.1), 0 10px 28px rgba(40, 70, 35, 0.08) !important;
+        }
+        .taxonomy-card .el-card__header {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(120, 150, 100, 0.2);
+            background: linear-gradient(180deg, rgba(242, 248, 236, 0.85) 0%, rgba(255, 255, 255, 0.82) 100%);
+        }
+        .taxonomy-card .el-card__body {
+            padding: 10px;
+        }
+        .taxonomy-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .taxonomy-card-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #2d4a2e;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+        .taxonomy-card-count.el-tag {
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        .taxonomy-add-btn.el-button--primary {
+            border: none;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #5a8f4a 0%, #4a7c3f 100%);
+            box-shadow: 0 6px 14px rgba(74, 124, 63, 0.24);
+        }
+        .taxonomy-add-btn.el-button--primary:hover {
+            filter: brightness(1.04);
+            transform: translateY(-1px);
+        }
+        .taxonomy-table.el-table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .taxonomy-table .el-button--text {
+            font-weight: 600;
+        }
+        .taxonomy-dialog .el-dialog {
+            border-radius: 14px;
+        }
+        .taxonomy-dialog .el-dialog__header {
+            padding: 16px 20px 10px;
+        }
+        .taxonomy-dialog .el-dialog__body {
+            padding: 8px 20px 4px;
+        }
+        .taxonomy-dialog .el-dialog__footer {
+            padding: 10px 20px 16px;
+        }
+        @media (max-width: 992px) {
+            .taxonomy-grid .el-col {
+                margin-bottom: 10px;
+            }
+        }
+        /* 说明条：信息提示，不用「成功」绿 */
+        .taxonomy-tip-alert.el-alert--info {
+            background: rgba(236, 244, 232, 0.92) !important;
+            border: 1px solid rgba(110, 145, 95, 0.38) !important;
+            margin-bottom: 10px !important;
+        }
+        .taxonomy-tip-alert.el-alert--info .el-alert__icon {
+            color: #4a7c3f;
+            font-size: 16px;
+        }
+        .taxonomy-tip-alert .el-alert__title {
+            color: #2d4a2e;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .taxonomy-tip-alert .el-alert__description {
+            margin-top: 6px;
+            font-size: 12px;
+            line-height: 1.55;
+            color: #556850;
+        }
+    </style>
+</head>
+<body class="admin-users-page admin-users-agri taxonomy-page">
+<div id="app" class="admin-users-root taxonomy-root" v-cloak>
+    <el-container class="admin-users-layout" direction="vertical">
+        <el-header height="48px" class="admin-users-header">
+            <div class="admin-users-header-inner">
+                <div class="admin-users-header-brand">
+                    <span class="admin-users-header-emoji" aria-hidden="true">🌾</span>
+                    <el-tag type="success" effect="plain" size="mini">管理端</el-tag>
+                    <el-divider direction="vertical"></el-divider>
+                    <span class="admin-users-header-title">分类管理</span>
+                </div>
+            </div>
+        </el-header>
+        <el-main class="admin-users-el-main">
+            <div class="admin-users-main-inner">
+                <div class="admin-users-page-heading">
+                    <h2 class="admin-users-page-title">产地与分类字典</h2>
+                </div>
+                <el-alert class="taxonomy-tip-alert"
+                          title="此处维护「产地」与「商品分类」"
+                          description="保存后会出现在集市筛选条和商品编辑页的下拉/联想列表中。删除某一项前，请先在农产品管理中取消该商品的对应关联；仍有商品在用时，系统将不允许删除。"
+                          type="info"
+                          :closable="false"
+                          show-icon>
+                </el-alert>
+                <el-row :gutter="12" class="taxonomy-grid">
+                    <el-col :xs="24" :md="12">
+                        <el-card shadow="hover" class="taxonomy-card">
+                            <div slot="header" class="taxonomy-card-head">
+                                <span class="taxonomy-card-title">
+                                    <span>📍 产地管理</span>
+                                    <el-tag size="mini" type="success" effect="plain" class="taxonomy-card-count">{{ provinces.length }}</el-tag>
+                                </span>
+                                <el-button type="primary" size="mini" class="taxonomy-add-btn" @click="openCreate('province')">新增产地</el-button>
+                            </div>
+                            <el-table :data="provinces" size="small" border stripe class="taxonomy-table" style="width:100%;" empty-text="暂无省份">
+                                <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
+                                <el-table-column prop="name" label="省份名称" min-width="130"></el-table-column>
+                                <el-table-column label="操作" width="90" align="center">
+                                    <template slot-scope="scope">
+                                        <el-button type="text" size="mini" style="color:#c45656;"
+                                                   @click="removeProvince(scope.row)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-col>
+                    <el-col :xs="24" :md="12">
+                        <el-card shadow="hover" class="taxonomy-card">
+                            <div slot="header" class="taxonomy-card-head">
+                                <span class="taxonomy-card-title">
+                                    <span>🧩 分类管理</span>
+                                    <el-tag size="mini" type="success" effect="plain" class="taxonomy-card-count">{{ categories.length }}</el-tag>
+                                </span>
+                                <el-button type="primary" size="mini" class="taxonomy-add-btn" @click="openCreate('category')">新增分类</el-button>
+                            </div>
+                            <el-table :data="categories" size="small" border stripe class="taxonomy-table" style="width:100%;" empty-text="暂无分类">
+                                <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
+                                <el-table-column prop="name" label="分类名称" min-width="130"></el-table-column>
+                                <el-table-column label="操作" width="90" align="center">
+                                    <template slot-scope="scope">
+                                        <el-button type="text" size="mini" style="color:#c45656;"
+                                                   @click="removeCategory(scope.row)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-col>
+                </el-row>
+            </div>
+        </el-main>
+    </el-container>
+
+    <el-dialog :title="createMode === 'province' ? '新增产地' : '新增分类'"
+               :visible.sync="dialogVisible"
+               custom-class="taxonomy-dialog"
+               width="420px"
+               :close-on-click-modal="false">
+        <el-input v-model.trim="draftName" maxlength="32" placeholder="请输入名称"></el-input>
+        <span slot="footer" class="dialog-footer">
+            <el-button size="small" @click="dialogVisible=false">取消</el-button>
+            <el-button type="primary" size="small" :loading="submitting" @click="submitCreate">确定</el-button>
+        </span>
+    </el-dialog>
+</div>
+
+<script th:src="@{/plugins/vue/vue.js}"></script>
+<script th:src="@{/plugins/axios/axios.min.js}"></script>
+<script th:src="@{/plugins/element-ui/index.js}"></script>
+<script>
+    if (typeof Vue !== 'undefined' && typeof ELEMENT !== 'undefined') {
+        Vue.use(ELEMENT);
+    }
+</script>
+<script th:inline="javascript">
+    (function () {
+        var API_PROVINCES = /*[[@{/api/admin/taxonomy/provinces}]]*/ '/api/admin/taxonomy/provinces';
+        var API_CATEGORIES = /*[[@{/api/admin/taxonomy/categories}]]*/ '/api/admin/taxonomy/categories';
+        var csrf = document.querySelector('meta[name="_csrf"]');
+        var csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+        if (csrf && csrfHeader) {
+            axios.defaults.headers.common[csrfHeader.getAttribute('content')] = csrf.getAttribute('content');
+        }
+
+        new Vue({
+            el: '#app',
+            data: function () {
+                return {
+                    provinces: [],
+                    categories: [],
+                    dialogVisible: false,
+                    createMode: 'province',
+                    draftName: '',
+                    submitting: false
+                };
+            },
+            mounted: function () {
+                this.loadAll();
+            },
+            methods: {
+                loadAll: function () {
+                    this.loadProvinces();
+                    this.loadCategories();
+                },
+                loadProvinces: function () {
+                    var vm = this;
+                    axios.get(API_PROVINCES).then(function (res) {
+                        var b = res.data;
+                        vm.provinces = b && b.code === 200 ? (b.data || []) : [];
+                    }).catch(function () { vm.provinces = []; });
+                },
+                loadCategories: function () {
+                    var vm = this;
+                    axios.get(API_CATEGORIES).then(function (res) {
+                        var b = res.data;
+                        vm.categories = b && b.code === 200 ? (b.data || []) : [];
+                    }).catch(function () { vm.categories = []; });
+                },
+                openCreate: function (mode) {
+                    this.createMode = mode === 'category' ? 'category' : 'province';
+                    this.draftName = '';
+                    this.dialogVisible = true;
+                },
+                submitCreate: function () {
+                    var vm = this;
+                    var name = (vm.draftName || '').trim();
+                    if (!name) {
+                        vm.$message.warning('名称不能为空');
+                        return;
+                    }
+                    vm.submitting = true;
+                    var url = vm.createMode === 'province' ? API_PROVINCES : API_CATEGORIES;
+                    axios.post(url, { name: name }).then(function (res) {
+                        var b = res.data;
+                        if (!b || b.code !== 200) {
+                            return vm.$alert((b && b.message) || '保存失败', '提示', { type: 'error', confirmButtonText: '确定' });
+                        }
+                        vm.dialogVisible = false;
+                        vm.loadAll();
+                        vm.$message.success('保存成功');
+                    }).catch(function (e) {
+                        var m = '保存失败';
+                        if (e && e.response && e.response.data && e.response.data.message) m = e.response.data.message;
+                        vm.$alert(m, '提示', { type: 'error', confirmButtonText: '确定' });
+                    }).finally(function () {
+                        vm.submitting = false;
+                    });
+                },
+                removeProvince: function (row) {
+                    var vm = this;
+                    vm.$confirm('确定删除省份「' + row.name + '」吗？', '删除确认', {
+                        type: 'warning',
+                        confirmButtonText: '删除',
+                        cancelButtonText: '取消'
+                    }).then(function () {
+                        return axios.delete(API_PROVINCES + '/' + row.id);
+                    }).then(function () {
+                        vm.loadProvinces();
+                        vm.$message.success('删除成功');
+                    }).catch(function (e) {
+                        if (e === 'cancel') return;
+                        var m = '删除失败';
+                        if (e && e.response && e.response.data && e.response.data.message) m = e.response.data.message;
+                        vm.$alert(m, '提示', { type: 'error', confirmButtonText: '确定' });
+                    });
+                },
+                removeCategory: function (row) {
+                    var vm = this;
+                    vm.$confirm('确定删除分类「' + row.name + '」吗？', '删除确认', {
+                        type: 'warning',
+                        confirmButtonText: '删除',
+                        cancelButtonText: '取消'
+                    }).then(function () {
+                        return axios.delete(API_CATEGORIES + '/' + row.id);
+                    }).then(function () {
+                        vm.loadCategories();
+                        vm.$message.success('删除成功');
+                    }).catch(function (e) {
+                        if (e === 'cancel') return;
+                        var m = '删除失败';
+                        if (e && e.response && e.response.data && e.response.data.message) m = e.response.data.message;
+                        vm.$alert(m, '提示', { type: 'error', confirmButtonText: '确定' });
+                    });
+                }
+            }
+        });
+    })();
+</script>
+</body>
+</html>

@@ -15,9 +15,6 @@
             <span class="landing-badge user-center-badge">用户中心</span>
         </div>
         <div class="user-center-nav">
-            <a th:href="@{/user/market}">返回集市</a>
-            <a th:href="@{/user/cart}">购物车</a>
-            <a th:href="@{/user/orders}">我的订单</a>
             <form th:action="@{/logout}" method="post" class="inline">
                 <button type="submit" class="btn-landing ghost">退出登录</button>
             </form>
@@ -26,8 +23,8 @@
 </header>
 <main class="landing-main user-center-main">
     <th:block th:if="${profile != null}">
-        <p th:if="${msg}" class="user-shop-alert ok" th:text="${msg}">提示</p>
-        <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
+        <p th:if="${msg}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${msg}">提示</p>
+        <p th:if="${err}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${err}">错误</p>
 
         <section class="user-center-hero">
             <div class="user-center-avatar" th:text="${avatarLetter}">U</div>
@@ -86,12 +83,13 @@
 
             <section class="user-center-panel user-center-actions-panel" aria-label="账户操作">
                 <h2 class="user-center-panel-title">账户操作</h2>
-                <p class="muted user-center-edit-tip" th:if="${isAdmin}">管理员可通过下方按钮分别管理账号、购物车和订单。</p>
-                <p class="muted user-center-edit-tip" th:unless="${isAdmin}">可通过下方按钮分别进入编辑信息、购物车和订单页面。</p>
+                <p class="muted user-center-edit-tip" th:if="${isAdmin}">管理员可通过下方按钮分别编辑信息、购物车、订单和评论。</p>
+                <p class="muted user-center-edit-tip" th:unless="${isAdmin}">可通过下方按钮分别进入编辑信息、购物车、订单和评论页面。</p>
                 <div class="user-center-action-btns">
                     <a class="btn-landing primary user-center-edit-entry" th:href="@{/user/profile/edit}">我的信息</a>
                     <a class="btn-landing secondary user-center-edit-entry" th:href="@{/user/cart}">我的购物车</a>
                     <a class="btn-landing secondary user-center-edit-entry" th:href="@{/user/orders}">我的订单</a>
+                    <a class="btn-landing secondary user-center-edit-entry" th:href="@{/user/reviews}">我的评论</a>
                 </div>
             </section>
         </div>
@@ -105,5 +103,6 @@
     </section>
 </main>
 <p class="landing-footer-copy">绿色 · 健康 · 可追溯</p>
+<script th:src="@{/js/flash-alert.js}"></script>
 </body>
 </html>

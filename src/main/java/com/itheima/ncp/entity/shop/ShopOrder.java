@@ -1,5 +1,6 @@
 package com.itheima.ncp.entity.shop;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
+@TableName("shop_order")
 public class ShopOrder {
 
     /** 订单主键。 */

@@ -5,6 +5,8 @@ import com.itheima.ncp.service.shop.ProductReviewService;
 import com.itheima.ncp.service.user.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -21,6 +23,20 @@ public class UserReviewController {
     public UserReviewController(UserService userService, ProductReviewService productReviewService) {
         this.userService = userService;
         this.productReviewService = productReviewService;
+    }
+
+    /**
+     * 我的评论页面。
+     */
+    @GetMapping("/user/reviews")
+    public String myReviews(Authentication auth, Model model, RedirectAttributes ra) {
+        User u = userService.getByUsername(auth.getName());
+        if (u == null || u.getId() == null) {
+            ra.addFlashAttribute("err", "用户不存在");
+            return "redirect:/user/profile";
+        }
+        model.addAttribute("reviews", productReviewService.listByUserId(u.getId()));
+        return "user/reviews";
     }
 
     /**
@@ -49,4 +65,5 @@ public class UserReviewController {
         // 回到对应商品详情页。
         return "redirect:/user/market/" + productId;
     }
+
 }

@@ -1,0 +1,33 @@
+@startuml
+left to right direction
+title 农家优品 登录流程
+
+start
+
+:用户访问登录页;
+:展示 login.html;
+:POST 提交登录;
+
+:Spring Security 认证过滤器;
+:UserDetailsServiceImpl 查库;
+:FlexiblePasswordEncoder 验密;
+
+note right
+  校验项:
+  用户存在
+  账号已启用
+  密码正确
+end note
+
+if (认证成功) then (yes)
+else (no)
+  :返回登录页;
+  stop
+endif
+
+:写入 Session;
+:跳转首页;
+
+stop
+
+@enduml

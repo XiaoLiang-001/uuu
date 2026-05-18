@@ -20,6 +20,10 @@ public class AdminProductRowDto {
     private Integer stock;
     /** ON_SHELF / OFF_SHELF */
     private String status;
+    /** 产地省份名称。 */
+    private String provinceName;
+    /** 分类名称。 */
+    private String categoryName;
     /** 首张图存储文件名，无则为 null */
     private String coverStoredName;
 }

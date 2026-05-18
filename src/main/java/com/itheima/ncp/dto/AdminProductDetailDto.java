@@ -23,6 +23,10 @@ public class AdminProductDetailDto {
     private Integer stock;
     /** ON_SHELF / OFF_SHELF */
     private String status;
+    /** 产地省份名称。 */
+    private String provinceName;
+    /** 分类名称。 */
+    private String categoryName;
     /** 商品图片文件名列表。 */
     private List<String> imageNames;
 }

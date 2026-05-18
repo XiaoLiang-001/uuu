@@ -48,13 +48,21 @@ public class ProductReviewServiceImpl implements ProductReviewService {
         return productReviewMapper.findByProductIdOrderByCreatedAtDesc(productId);
     }
 
+    @Override
+    public List<ProductReview> listByUserId(Long userId) {
+        if (userId == null) {
+            return java.util.Collections.emptyList();
+        }
+        return productReviewMapper.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
     /**
      * 新增商品评价，包含商品状态、内容、评分与购买记录校验。
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addReview(long productId, Long userId, String loginUsername, String content, Integer rating) {
-        Product p = productMapper.findById(productId);
+        Product p = productMapper.selectById(productId);
         if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
             throw new IllegalArgumentException("商品不存在或已下架");
         }
@@ -79,5 +87,50 @@ public class ProductReviewServiceImpl implements ProductReviewService {
         rev.setContent(c);
         rev.setRating(r);
         productReviewMapper.insert(rev);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateReview(Long reviewId, Long userId, String content, Integer rating) {
+        if (reviewId == null || reviewId <= 0) {
+            throw new IllegalArgumentException("评论参数无效");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        ProductReview existing = productReviewMapper.findById(reviewId);
+        if (existing == null || existing.getUserId() == null || !userId.equals(existing.getUserId())) {
+            throw new IllegalArgumentException("评论不存在或无权修改");
+        }
+        String c = content == null ? "" : content.trim();
+        if (c.isEmpty()) {
+            throw new IllegalArgumentException("请填写评论内容");
+        }
+        if (c.length() > 2000) {
+            throw new IllegalArgumentException("评论过长");
+        }
+        int r = rating == null ? 5 : rating;
+        if (r < 1 || r > 5) {
+            throw new IllegalArgumentException("评分应为 1～5");
+        }
+        int n = productReviewMapper.updateByIdAndUserId(reviewId, userId, c, r);
+        if (n <= 0) {
+            throw new IllegalArgumentException("评论修改失败");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteReview(Long reviewId, Long userId) {
+        if (reviewId == null || reviewId <= 0) {
+            throw new IllegalArgumentException("评论参数无效");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        int n = productReviewMapper.deleteByIdAndUserId(reviewId, userId);
+        if (n <= 0) {
+            throw new IllegalArgumentException("评论不存在或无权删除");
+        }
     }
 }

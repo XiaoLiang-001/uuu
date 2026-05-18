@@ -1,5 +1,7 @@
 package com.itheima.ncp.controller;
 
+import com.itheima.ncp.dto.ProvinceOptionDto;
+import com.itheima.ncp.dto.CategoryOptionDto;
 import com.itheima.ncp.entity.product.Product;
 import com.itheima.ncp.entity.product.ProductStatus;
 import com.itheima.ncp.entity.shop.ProductReview;
@@ -46,6 +48,9 @@ public class UserMarketController {
     @GetMapping("/user/market")
     public String list(@RequestParam(value = "page", defaultValue = "1") int page,
                       @RequestParam(value = "size", defaultValue = "12") int size,
+                      @RequestParam(value = "keyword", required = false) String keyword,
+                      @RequestParam(value = "provinceId", required = false) Long provinceId,
+                      @RequestParam(value = "categoryId", required = false) Long categoryId,
                       Model model) {
         // 页码最小为 1。
         if (page < 1) {
@@ -59,8 +64,9 @@ public class UserMarketController {
         if (size > 48) {
             size = 48;
         }
+        String kw = keyword == null ? "" : keyword.trim();
         // 查询总条数并计算总页数。
-        int total = productService.countOnShelf();
+        int total = productService.countOnShelf(kw, provinceId, categoryId);
         int totalPages = total == 0 ? 1 : (int) Math.ceil((double) total / size);
         // 页码超界时截断到最后一页。
         if (page > totalPages) {
@@ -69,8 +75,10 @@ public class UserMarketController {
         // 计算分页偏移量。
         int offset = (page - 1) * size;
         // 查询当前页商品与首图映射。
-        List<Product> products = productService.listOnShelfPage(offset, size);
+        List<Product> products = productService.listOnShelfPage(kw, provinceId, categoryId, offset, size);
         Map<Long, String> covers = productService.mapFirstImageStoredByProducts(products);
+        List<ProvinceOptionDto> provinceOptions = productService.listProvinceOptionsForMarket();
+        List<CategoryOptionDto> categoryOptions = productService.listCategoryOptionsForMarket(provinceId);
 
         // 页面可选页大小列表，若当前 size 不在默认值中则动态补入。
         List<Integer> sizeChoices = new ArrayList<Integer>(DEFAULT_PAGE_SIZES);
@@ -87,6 +95,11 @@ public class UserMarketController {
         model.addAttribute("pageSizeChoices", sizeChoices);
         model.addAttribute("products", products);
         model.addAttribute("covers", covers);
+        model.addAttribute("keyword", kw);
+        model.addAttribute("provinceId", provinceId);
+        model.addAttribute("categoryId", categoryId);
+        model.addAttribute("provinceOptions", provinceOptions);
+        model.addAttribute("categoryOptions", categoryOptions);
         return "user/market";
     }
 
@@ -96,11 +109,34 @@ public class UserMarketController {
     @GetMapping("/user/market/{id:\\d+}")
     public String detail(@PathVariable long id, Authentication authentication, Model model,
                         RedirectAttributes ra) {
-        // 仅允许查看存在且上架中的商品。
+        // 先校验商品是否存在。
         Product p = productService.getById(id);
-        if (p == null || p.getStatus() != ProductStatus.ON_SHELF) {
+        if (p == null) {
             ra.addFlashAttribute("err", "商品不存在或已下架");
             return "redirect:/user/market";
+        }
+        // 常规入口仅允许查看上架商品；若来自“我的评论”且是本人历史评论商品，则允许查看详情。
+        if (p.getStatus() != ProductStatus.ON_SHELF) {
+            boolean canViewOffShelfFromOwnReview = false;
+            if (authentication != null && authentication.isAuthenticated()) {
+                User current = userService.getByUsername(authentication.getName());
+                if (current != null && current.getId() != null) {
+                    List<ProductReview> myReviews = productReviewService.listByUserId(current.getId());
+                    for (ProductReview r : myReviews) {
+                        if (r != null && r.getProductId() != null && r.getProductId() == id) {
+                            canViewOffShelfFromOwnReview = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!canViewOffShelfFromOwnReview) {
+                ra.addFlashAttribute("err", "商品不存在或已下架");
+                return "redirect:/user/market";
+            }
+            model.addAttribute("offShelfFromReview", true);
+        } else {
+            model.addAttribute("offShelfFromReview", false);
         }
         // 准备图片、描述与评价展示数据。
         List<String> imageNames = productService.splitStoredImageNames(p);
@@ -108,13 +144,23 @@ public class UserMarketController {
         String desc = p.getDescription();
         boolean descBlank = desc == null || desc.trim().isEmpty();
         List<ProductReview> reviews = productReviewService.listByProductId(id);
-        // 默认不可评价，登录且购买过后才可评价。
+        // 默认不可评价，登录且购买过后才可评价；下架商品仅支持浏览，不可新增评价。
         boolean canReview = false;
+        String reviewUnavailableReason = "仅购买过本商品的用户可以发表评价。";
+        if (p.getStatus() != ProductStatus.ON_SHELF) {
+            reviewUnavailableReason = "该商品已下架或已删除，暂不支持新增评价。";
+        }
         if (authentication != null && authentication.isAuthenticated()) {
             User u = userService.getByUsername(authentication.getName());
             if (u != null && u.getId() != null) {
-                canReview = productReviewService.canUserReview(u.getId(), id);
+                if (p.getStatus() == ProductStatus.ON_SHELF && productReviewService.canUserReview(u.getId(), id)) {
+                    canReview = true;
+                } else if (p.getStatus() == ProductStatus.ON_SHELF) {
+                    reviewUnavailableReason = "仅购买过本商品的用户可以发表评价。";
+                }
             }
+        } else if (p.getStatus() == ProductStatus.ON_SHELF) {
+            reviewUnavailableReason = "请先登录后再评价。";
         }
         // 注入详情页模型。
         model.addAttribute("product", p);
@@ -123,6 +169,7 @@ public class UserMarketController {
         model.addAttribute("descriptionBlank", descBlank);
         model.addAttribute("reviews", reviews);
         model.addAttribute("canReview", canReview);
+        model.addAttribute("reviewUnavailableReason", reviewUnavailableReason);
         return "user/market-detail";
     }
 }

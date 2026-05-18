@@ -112,29 +112,9 @@
             align-items: flex-end;
             justify-content: space-between;
             gap: 12px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             flex-shrink: 0;
             flex-wrap: wrap;
-        }
-        .admin-products-page-heading-text {
-            flex: 1;
-            min-width: 0;
-        }
-        .admin-products-page-heading .el-breadcrumb {
-            font-size: 12px;
-            margin-bottom: 4px;
-            line-height: 1;
-        }
-        .admin-products-page-heading .el-breadcrumb__inner a {
-            color: #3d7a35;
-            font-weight: 500;
-        }
-        .admin-products-page-heading .el-breadcrumb__inner a:hover {
-            color: #2d5a28;
-        }
-        .admin-products-page-heading .el-breadcrumb__item:last-child .el-breadcrumb__inner {
-            color: #2d4a2e;
-            font-weight: 600;
         }
         .admin-products-page-title {
             margin: 0;
@@ -142,13 +122,6 @@
             font-weight: 700;
             color: #2d4a2e;
             letter-spacing: 0.06em;
-        }
-        .admin-products-heading-actions {
-            flex-shrink: 0;
-            margin-bottom: 2px;
-        }
-        .admin-products-heading-actions a.el-button {
-            text-decoration: none;
         }
         .admin-products-tip-alert.el-alert--success {
             background: rgba(90, 150, 80, 0.12) !important;
@@ -214,6 +187,20 @@
         }
         .admin-products-agri .admin-vue-table.el-table__body tr:hover > td.el-table__cell {
             background: #ecf5e8 !important;
+        }
+        /* 已下架：整行灰底 + 左侧提示条，与上架商品区分 */
+        .admin-products-agri .admin-vue-table.el-table__body tr.admin-product-row-off-shelf td.el-table__cell {
+            background: rgba(228, 232, 224, 0.92) !important;
+            color: #4d5649;
+        }
+        .admin-products-agri .admin-vue-table.el-table--striped .el-table__body tr.admin-product-row-off-shelf.el-table__row--striped td.el-table__cell {
+            background: rgba(216, 222, 210, 0.94) !important;
+        }
+        .admin-products-agri .admin-vue-table.el-table__body tr.admin-product-row-off-shelf:hover > td.el-table__cell {
+            background: rgba(205, 214, 198, 0.98) !important;
+        }
+        .admin-products-agri .admin-vue-table.el-table__body tr.admin-product-row-off-shelf td:first-child.el-table__cell {
+            box-shadow: inset 3px 0 0 rgba(130, 138, 125, 0.65);
         }
         .admin-products-agri .admin-vue-table.el-table::before { background-color: rgba(120, 150, 100, 0.2); }
         .admin-vue-table .el-table__row { cursor: pointer; }
@@ -323,17 +310,53 @@
         .admin-products-page .el-alert {
             flex-shrink: 0;
         }
-        .admin-products-filters {
+        /* 与用户页一致：工具条内左侧筛选项，右侧「上架新商品」固定列 */
+        .admin-products-toolbar {
+            flex-shrink: 0;
+            margin-bottom: 8px;
             display: flex;
+            gap: 8px;
             flex-wrap: wrap;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            flex-shrink: 0;
+            position: relative;
+            padding-right: 188px;
         }
-        .admin-products-filters .el-input,
-        .admin-products-filters .el-select {
+        .admin-products-toolbar .el-input,
+        .admin-products-toolbar .el-select {
             vertical-align: middle;
+        }
+        .admin-products-toolbar-sep {
+            width: 1px;
+            height: 24px;
+            background: rgba(120, 150, 100, 0.35);
+            margin: 0 12px 0 22px;
+        }
+        .admin-products-toolbar .el-button--small {
+            min-width: 74px;
+        }
+        .admin-products-batch-btn.el-button--small {
+            min-width: 90px;
+            font-weight: 600;
+            box-shadow: 0 1px 6px rgba(60, 100, 50, 0.12);
+        }
+        .admin-products-batch-btn.el-button--small:first-of-type {
+            margin-left: 6px;
+        }
+        .admin-products-toolbar-create {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 180px;
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+            text-decoration: none !important;
+            box-sizing: border-box;
+        }
+        .admin-products-toolbar-create [class^="el-icon-"] {
+            font-size: 12px;
+            margin-right: 2px;
         }
         .admin-products-agri .admin-products-edit-link.el-button--text {
             color: #3d7a35 !important;
@@ -362,12 +385,7 @@
         <el-main class="admin-products-el-main">
             <div class="admin-products-main-inner">
                 <div class="admin-products-page-heading">
-                    <div class="admin-products-page-heading-text">
-                        <h2 class="admin-products-page-title">农产品列表</h2>
-                    </div>
-                    <div class="admin-products-heading-actions">
-                        <a class="el-button el-button--success el-button--mini" th:href="@{/admin/products/new}">＋ 上架新商品</a>
-                    </div>
+                    <h2 class="admin-products-page-title">农产品列表</h2>
                 </div>
                 <el-alert
                         class="admin-products-tip-alert"
@@ -377,19 +395,40 @@
                         show-icon>
                 </el-alert>
 
-                <div class="admin-products-filters">
-                    <el-input v-model="keyword" placeholder="按名称搜索" clearable size="small"
-                              style="width:200px;" @keyup.enter.native="search"></el-input>
-                    <el-select v-model="filterStatus" placeholder="全部状态" clearable size="small" style="width:120px;">
-                        <el-option label="上架中" value="ON_SHELF"></el-option>
-                        <el-option label="已下架" value="OFF_SHELF"></el-option>
-                    </el-select>
-                    <el-button type="success" size="small" icon="el-icon-search" @click="search">查询</el-button>
-                    <el-button size="small" @click="resetFilters">重置</el-button>
-                </div>
-
                 <el-card class="admin-products-card" shadow="hover" :body-style="{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px' }">
                     <div class="admin-products-table-shell">
+                        <div class="admin-products-toolbar">
+                            <el-input v-model="keyword" placeholder="按名称搜索" clearable size="small"
+                                      style="width:200px;" @keyup.enter.native="search"></el-input>
+                            <el-select v-model="filterStatus" placeholder="全部状态" clearable size="small" style="width:120px;">
+                                <el-option label="上架中" value="ON_SHELF"></el-option>
+                                <el-option label="已下架" value="OFF_SHELF"></el-option>
+                            </el-select>
+                            <el-select v-model="filterProvinceId" placeholder="全部省份" clearable size="small" style="width:140px;">
+                                <el-option v-for="opt in provinceOptions" :key="opt.id" :label="opt.name" :value="opt.id"></el-option>
+                            </el-select>
+                            <el-select v-model="filterCategoryId" placeholder="全部分类" clearable size="small" style="width:140px;">
+                                <el-option v-for="opt in categoryOptions" :key="opt.id" :label="opt.name" :value="opt.id"></el-option>
+                            </el-select>
+                            <el-button type="success" size="small" icon="el-icon-search" @click="search">查询</el-button>
+                            <el-button size="small" @click="resetFilters">重置</el-button>
+                            <span class="admin-products-toolbar-sep" aria-hidden="true"></span>
+                            <el-button class="admin-products-batch-btn" size="small" type="success" plain
+                                       :disabled="!hasSelection || batchLoading"
+                                       :loading="batchLoading"
+                                       @click="batchSetStatus('ON_SHELF')">批量上架</el-button>
+                            <el-button class="admin-products-batch-btn" size="small" type="warning" plain
+                                       :disabled="!hasSelection || batchLoading"
+                                       :loading="batchLoading"
+                                       @click="batchSetStatus('OFF_SHELF')">批量下架</el-button>
+                            <el-button class="admin-products-batch-btn" size="small" type="danger" plain
+                                       :disabled="!hasSelection || batchLoading"
+                                       :loading="batchLoading"
+                                       @click="batchDelete">批量删除</el-button>
+                            <a class="el-button el-button--primary el-button--small admin-products-toolbar-create" th:href="@{/admin/products/new}">
+                                <i class="el-icon-plus"></i><span> 上架新商品</span>
+                            </a>
+                        </div>
                         <el-table
                                 :data="pagedRows"
                                 v-loading="loading"
@@ -398,10 +437,14 @@
                                 size="small"
                                 :height="tableHeight"
                                 highlight-current-row
+                                :row-class-name="rowClassName"
+                                :cell-style="productCellStyle"
                                 class="admin-vue-table market-table admin-products-table"
                                 style="width:100%"
                                 @row-click="onRowClick"
+                                @selection-change="onSelectionChange"
                                 :empty-text="emptyText">
+                            <el-table-column type="selection" width="44" fixed="left"></el-table-column>
                             <el-table-column label="预览" width="72" align="center" fixed="left">
                                 <template slot-scope="scope">
                                     <img v-if="scope.row.coverStoredName" class="admin-vue-thumb"
@@ -410,6 +453,8 @@
                                 </template>
                             </el-table-column>
                             <el-table-column prop="name" label="名称" min-width="160" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="categoryName" label="分类" width="140" align="center" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="provinceName" label="产地" width="120" align="center" show-overflow-tooltip></el-table-column>
                             <el-table-column label="单价(元)" width="96" align="right" header-align="right">
                                 <template slot-scope="scope">{{ formatPrice(scope.row.price) }}</template>
                             </el-table-column>
@@ -430,14 +475,20 @@
                             <el-table-column label="上下架" width="92" align="center">
                                 <template slot-scope="scope">
                                     <el-button v-if="scope.row.status === 'ON_SHELF'" type="danger" size="mini"
+                                               :loading="isRowActionBusy(scope.row.id, 'status')"
+                                               :disabled="isRowActionBusy(scope.row.id, 'status') || isRowActionBusy(scope.row.id, 'delete')"
                                                @click.stop="toggleStatus(scope.row, 'OFF_SHELF')">下架</el-button>
                                     <el-button v-else type="success" size="mini"
+                                               :loading="isRowActionBusy(scope.row.id, 'status')"
+                                               :disabled="isRowActionBusy(scope.row.id, 'status') || isRowActionBusy(scope.row.id, 'delete')"
                                                @click.stop="toggleStatus(scope.row, 'ON_SHELF')">上架</el-button>
                                 </template>
                             </el-table-column>
                             <el-table-column label="删除" width="72" align="center">
                                 <template slot-scope="scope">
                                     <el-button v-if="scope.row.status === 'OFF_SHELF'" type="danger" plain size="mini"
+                                               :loading="isRowActionBusy(scope.row.id, 'delete')"
+                                               :disabled="isRowActionBusy(scope.row.id, 'status') || isRowActionBusy(scope.row.id, 'delete')"
                                                @click.stop="confirmDelete(scope.row)">删除</el-button>
                                     <span v-else class="muted" style="font-size:12px;">—</span>
                                 </template>
@@ -474,6 +525,10 @@
 <script th:inline="javascript">
 (function () {
     var API_LIST = /*[[@{/api/admin/products}]]*/ '/api/admin/products';
+    var API_PROVINCE_OPTIONS = /*[[@{/api/admin/products/province-options}]]*/ '/api/admin/products/province-options';
+    var API_CATEGORY_OPTIONS = /*[[@{/api/admin/products/category-options}]]*/ '/api/admin/products/category-options';
+    var API_BATCH_STATUS = /*[[@{/api/admin/products/batch-status}]]*/ '/api/admin/products/batch-status';
+    var API_BATCH_DELETE = /*[[@{/api/admin/products/batch}]]*/ '/api/admin/products/batch';
     var ADMIN_DETAIL_BASE = /*[[@{/admin/products/}]]*/ '/admin/products/';
     var FILES_BASE = /*[[@{/files/products/}]]*/ '/files/products/';
 
@@ -484,8 +539,16 @@
     }
 
     function calcTableHeight() {
-        /* 顶栏、标题区、提示条、卡片边距、分页等占用约 210px，数值调小则表格更高 */
-        return Math.max(200, window.innerHeight - 252);
+        /* 与「用户管理」同结构时与用户页 292 一致，避免表头被压扁或留白过大 */
+        return Math.max(200, window.innerHeight - 292);
+    }
+
+    /** 与后端枚举兼容（大小写、首尾空格）；斑马纹等写在 td 上，必须用 cell-style 才能盖住 */
+    function isProductOffShelf(row) {
+        if (!row || row.status == null) {
+            return false;
+        }
+        return String(row.status).trim().toUpperCase() === 'OFF_SHELF';
     }
 
     new Vue({
@@ -495,9 +558,16 @@
                 rows: [],
                 keyword: '',
                 filterStatus: '',
+                filterProvinceId: null,
+                filterCategoryId: null,
+                provinceOptions: [],
+                categoryOptions: [],
                 currentPage: 1,
-                pageSize: 10,
+                pageSize: 20,
                 loading: false,
+                batchLoading: false,
+                selectedRows: [],
+                rowActionBusy: {},
                 emptyText: '暂无商品，请先上架。',
                 tableHeight: calcTableHeight()
             };
@@ -509,6 +579,9 @@
             pagedRows: function () {
                 var start = (this.currentPage - 1) * this.pageSize;
                 return this.rows.slice(start, start + this.pageSize);
+            },
+            hasSelection: function () {
+                return this.selectedRows && this.selectedRows.length > 0;
             }
         },
         mounted: function () {
@@ -544,9 +617,29 @@
             this.$nextTick(function () {
                 vm.tableHeight = calcTableHeight();
             });
+            this.loadProvinceOptions();
+            this.loadCategoryOptions();
             this.load();
         },
         methods: {
+            rowClassName: function (_ref) {
+                return isProductOffShelf(_ref.row) ? 'admin-product-row-off-shelf' : '';
+            },
+            productCellStyle: function (_ref) {
+                var row = _ref.row;
+                var columnIndex = _ref.columnIndex;
+                if (!isProductOffShelf(row)) {
+                    return {};
+                }
+                var style = {
+                    background: '#dbe3d6',
+                    color: '#3a4336'
+                };
+                if (columnIndex === 0) {
+                    style.borderLeft = '4px solid #7d8c78';
+                }
+                return style;
+            },
             fileUrl: function (name) {
                 return FILES_BASE + encodeURIComponent(name);
             },
@@ -557,6 +650,8 @@
             resetFilters: function () {
                 this.keyword = '';
                 this.filterStatus = '';
+                this.filterProvinceId = null;
+                this.filterCategoryId = null;
                 this.currentPage = 1;
                 this.load();
             },
@@ -574,6 +669,12 @@
                 if (vm.filterStatus) {
                     params.status = vm.filterStatus;
                 }
+                if (vm.filterProvinceId != null && vm.filterProvinceId !== '') {
+                    params.provinceId = vm.filterProvinceId;
+                }
+                if (vm.filterCategoryId != null && vm.filterCategoryId !== '') {
+                    params.categoryId = vm.filterCategoryId;
+                }
                 axios.get(API_LIST, { params: params })
                     .then(function (res) {
                         var b = res.data
@@ -587,7 +688,8 @@
                         if (vm.currentPage > last) {
                             vm.currentPage = last;
                         }
-                        var hasFilter = !!(k || vm.filterStatus);
+                        vm.selectedRows = [];
+                        var hasFilter = !!(k || vm.filterStatus || vm.filterProvinceId || vm.filterCategoryId);
                         vm.emptyText = hasFilter ? '没有符合条件的商品。' : '暂无商品，请先上架。';
                     })
                     .catch(function () {
@@ -602,6 +704,36 @@
                         vm.$nextTick(function () {
                             vm.tableHeight = calcTableHeight();
                         });
+                    });
+            },
+            loadProvinceOptions: function () {
+                var vm = this;
+                axios.get(API_PROVINCE_OPTIONS)
+                    .then(function (res) {
+                        var b = res.data;
+                        if (!b || b.code !== 200) {
+                            vm.provinceOptions = [];
+                            return;
+                        }
+                        vm.provinceOptions = b.data || [];
+                    })
+                    .catch(function () {
+                        vm.provinceOptions = [];
+                    });
+            },
+            loadCategoryOptions: function () {
+                var vm = this;
+                axios.get(API_CATEGORY_OPTIONS)
+                    .then(function (res) {
+                        var b = res.data;
+                        if (!b || b.code !== 200) {
+                            vm.categoryOptions = [];
+                            return;
+                        }
+                        vm.categoryOptions = b.data || [];
+                    })
+                    .catch(function () {
+                        vm.categoryOptions = [];
                     });
             },
             onPageChange: function (p) {
@@ -620,12 +752,110 @@
             onRowClick: function (row) {
                 window.location.href = ADMIN_DETAIL_BASE + row.id;
             },
+            onSelectionChange: function (rows) {
+                this.selectedRows = rows || [];
+            },
             formatPrice: function (v) {
                 if (v == null || v === '') return '0.00';
                 return Number(v).toFixed(2);
             },
+            selectedIds: function () {
+                var out = [];
+                (this.selectedRows || []).forEach(function (r) {
+                    if (r && r.id != null) out.push(r.id);
+                });
+                return out;
+            },
+            batchSetStatus: function (status) {
+                var vm = this;
+                var ids = vm.selectedIds();
+                if (!ids.length || vm.batchLoading) {
+                    return;
+                }
+                vm.batchLoading = true;
+                axios.patch(API_BATCH_STATUS, { ids: ids, status: status })
+                    .then(function (res) {
+                        var b = res.data;
+                        if (!b || b.code !== 200) {
+                            return vm.$alert((b && b.message) || '批量操作失败', '操作失败', {
+                                type: 'error',
+                                confirmButtonText: '确定'
+                            });
+                        }
+                        vm.selectedRows = [];
+                        vm.load();
+                        return vm.$alert(status === 'ON_SHELF' ? '批量上架成功。' : '批量下架成功。', '操作成功', {
+                            type: 'success',
+                            confirmButtonText: '确定'
+                        });
+                    })
+                    .catch(function (e) {
+                        var m = '批量操作失败';
+                        if (e && e.response && e.response.data && e.response.data.message) {
+                            m = e.response.data.message;
+                        }
+                        vm.$alert(m, '操作失败', {
+                            type: 'error',
+                            confirmButtonText: '确定'
+                        });
+                    })
+                    .finally(function () {
+                        vm.batchLoading = false;
+                    });
+            },
+            batchDelete: function () {
+                var vm = this;
+                var ids = vm.selectedIds();
+                if (!ids.length || vm.batchLoading) {
+                    return;
+                }
+                vm.$confirm('确定批量删除所选商品吗？仅已下架商品可删除。', '批量删除确认', {
+                    confirmButtonText: '删除',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(function () {
+                    vm.batchLoading = true;
+                    return axios.delete(API_BATCH_DELETE, { data: { ids: ids } });
+                }).then(function () {
+                    vm.selectedRows = [];
+                    vm.load();
+                    return vm.$alert('批量删除成功。', '操作成功', {
+                        type: 'success',
+                        confirmButtonText: '确定'
+                    });
+                }).catch(function (e) {
+                    if (e === 'cancel') {
+                        return;
+                    }
+                    var m = '批量删除失败';
+                    if (e && e.response && e.response.data && e.response.data.message) {
+                        m = e.response.data.message;
+                    }
+                    vm.$alert(m, '操作失败', {
+                        type: 'error',
+                        confirmButtonText: '确定'
+                    });
+                }).finally(function () {
+                    vm.batchLoading = false;
+                });
+            },
+            rowActionKey: function (id, action) {
+                return String(id) + ':' + String(action || '');
+            },
+            isRowActionBusy: function (id, action) {
+                var key = this.rowActionKey(id, action);
+                return !!this.rowActionBusy[key];
+            },
+            setRowActionBusy: function (id, action, busy) {
+                var key = this.rowActionKey(id, action);
+                this.$set(this.rowActionBusy, key, !!busy);
+            },
             toggleStatus: function (row, status) {
                 var vm = this;
+                if (vm.isRowActionBusy(row.id, 'status') || vm.isRowActionBusy(row.id, 'delete')) {
+                    return;
+                }
+                vm.setRowActionBusy(row.id, 'status', true);
                 axios.patch(API_LIST + '/' + row.id + '/status', { status: status })
                     .then(function (res) {
                         var b = res.data
@@ -650,15 +880,22 @@
                             type: 'error',
                             confirmButtonText: '确定'
                         });
+                    })
+                    .finally(function () {
+                        vm.setRowActionBusy(row.id, 'status', false);
                     });
             },
             confirmDelete: function (row) {
                 var vm = this;
+                if (vm.isRowActionBusy(row.id, 'delete') || vm.isRowActionBusy(row.id, 'status')) {
+                    return;
+                }
                 vm.$confirm('确定永久删除该商品吗？删除后不可恢复。', '删除确认', {
                     confirmButtonText: '删除',
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(function () {
+                    vm.setRowActionBusy(row.id, 'delete', true);
                     return axios.delete(API_LIST + '/' + row.id);
                 }).then(function () {
                     vm.load();
@@ -678,6 +915,8 @@
                         type: 'error',
                         confirmButtonText: '确定'
                     });
+                }).finally(function () {
+                    vm.setRowActionBusy(row.id, 'delete', false);
                 });
             }
         }

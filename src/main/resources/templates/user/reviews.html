@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>我的评论 · 农家优品</title>
+    <link rel="stylesheet" th:href="@{/plugins/element-ui/index.css}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        .user-reviews-page {
+            max-width: 1060px;
+            margin: 0 auto;
+            padding-bottom: 24px;
+        }
+        .user-reviews-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .user-reviews-title {
+            margin: 0;
+        }
+        .user-reviews-sub {
+            margin: 6px 0 0;
+        }
+        .user-reviews-metrics {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .user-reviews-metric {
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(120, 150, 100, 0.28);
+            background: rgba(255, 255, 255, 0.88);
+            min-width: 108px;
+        }
+        .user-reviews-metric-label {
+            display: block;
+            color: #6a7862;
+            font-size: 12px;
+        }
+        .user-reviews-metric-value {
+            display: block;
+            margin-top: 2px;
+            color: #2d4a2e;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .user-reviews-empty {
+            margin-top: 14px;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px dashed rgba(120, 150, 100, 0.35);
+        }
+        .user-review-card.order-card {
+            border: 1px solid rgba(120, 150, 100, 0.24);
+        }
+        .user-review-card .order-card-content {
+            width: 100%;
+        }
+        .user-review-head {
+            align-items: flex-start;
+        }
+        .user-review-product {
+            margin: 0;
+        }
+        .user-review-content {
+            margin-top: 4px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #2f4130;
+        }
+        .user-review-stars {
+            margin-left: 8px;
+            color: #f5a623;
+            letter-spacing: 1px;
+            font-size: 13px;
+        }
+        .user-reviews-note {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(96, 134, 86, 0.28);
+            background: rgba(240, 247, 234, 0.85);
+            color: #45623f;
+            font-size: 13px;
+        }
+        .user-review-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        .user-review-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(120, 150, 100, 0.2);
+        }
+        .user-review-item-label {
+            display: block;
+            font-size: 12px;
+            color: #6d7f67;
+            margin-bottom: 4px;
+        }
+        .user-review-item-value {
+            color: #243626;
+            font-weight: 600;
+        }
+        .user-review-content.user-review-item-value {
+            font-weight: 500;
+        }
+        .user-review-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body class="market-page">
+<header class="market-header">
+    <div class="market-header-inner">
+        <a class="market-back" th:href="@{/user/profile}">← 返回用户中心</a>
+        <form th:action="@{/logout}" method="post" class="inline">
+            <button type="submit" class="btn ghost market-logout">退出</button>
+        </form>
+    </div>
+</header>
+<main class="market-detail user-reviews-page" id="app" v-cloak>
+    <section class="user-reviews-head">
+        <div>
+            <h1 class="user-reviews-title">我的评论</h1>
+            <p class="muted user-reviews-sub">支持查看、编辑、删除自己的历史评论。</p>
+        </div>
+        <div class="user-reviews-metrics" v-if="!loading">
+            <div class="user-reviews-metric">
+                <span class="user-reviews-metric-label">评论总数</span>
+                <strong class="user-reviews-metric-value">{{ rows.length }}</strong>
+            </div>
+            <div class="user-reviews-metric">
+                <span class="user-reviews-metric-label">平均评分</span>
+                <strong class="user-reviews-metric-value">{{ avgRating }}</strong>
+            </div>
+        </div>
+    </section>
+    <p class="user-reviews-note" v-if="!loading && rows.length > 0">
+        字段说明：商品=评论对应商品；评分=1~5 星；评论内容=你提交的文本；评论时间=评论创建时间。
+    </p>
+
+    <div v-if="loading" class="muted">加载中...</div>
+    <div v-else-if="rows.length === 0" class="muted user-reviews-empty">暂无评论，去商品详情页发表第一条评论吧。</div>
+
+    <section v-else class="order-list">
+        <article class="order-card user-review-card" v-for="r in rows" :key="r.id">
+            <div class="order-card-content">
+                <div class="order-card-head user-review-head">
+                    <p class="order-card-no user-review-product">
+                        <span class="order-card-label">商品</span>
+                        <strong>{{ r.productName || ('#' + r.productId) }}</strong>
+                    </p>
+                    <span class="order-status-badge">
+                        评分 {{ r.rating }}/5
+                        <span class="user-review-stars">{{ stars(r.rating) }}</span>
+                    </span>
+                </div>
+                <div class="user-review-grid">
+                    <div class="user-review-item">
+                        <span class="user-review-item-label">商品信息</span>
+                        <span class="user-review-item-value">{{ r.productName || ('商品#' + r.productId) }}</span>
+                    </div>
+                    <div class="user-review-item">
+                        <span class="user-review-item-label">评分结果</span>
+                        <span class="user-review-item-value"> {{ r.rating }}/5（{{ ratingText(r.rating) }}） </span>
+                    </div>
+                    <div class="user-review-item">
+                        <span class="user-review-item-label">评论内容</span>
+                        <p class="user-review-content user-review-item-value">{{ r.content }}</p>
+                    </div>
+                    <div class="user-review-item">
+                        <span class="user-review-item-label">评论时间</span>
+                        <span class="user-review-item-value">{{ formatTime(r.createdAt) }}</span>
+                    </div>
+                </div>
+                <div class="order-card-actions user-review-actions">
+                    <button class="btn-landing secondary order-card-btn" type="button" @click="viewProduct(r)">查看商品</button>
+                    <button class="btn-landing secondary order-card-btn" type="button" @click="openEdit(r)">编辑</button>
+                    <button class="btn-landing secondary order-card-btn" type="button" @click="removeRow(r)">删除</button>
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <el-dialog title="编辑评论" :visible.sync="dialogVisible" width="520px" :close-on-click-modal="false">
+        <el-form label-position="top" size="small" @submit.native.prevent="submitEdit">
+            <el-form-item label="评分">
+                <el-rate v-model="form.rating" :max="5" show-score :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+            </el-form-item>
+            <el-form-item label="评论内容">
+                <el-input type="textarea" :rows="5" maxlength="2000" show-word-limit v-model.trim="form.content"></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button size="small" @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" size="small" :loading="saving" @click="submitEdit">保存</el-button>
+        </span>
+    </el-dialog>
+</main>
+<script th:src="@{/plugins/vue/vue.js}"></script>
+<script th:src="@{/plugins/axios/axios.min.js}"></script>
+<script th:src="@{/plugins/element-ui/index.js}"></script>
+<script>
+    if (typeof Vue !== 'undefined' && typeof ELEMENT !== 'undefined') {
+        Vue.use(ELEMENT);
+    }
+</script>
+<script th:inline="javascript">
+    (function () {
+        var API = /*[[@{/api/user/reviews}]]*/ '/api/user/reviews';
+        var csrf = document.querySelector('meta[name="_csrf"]');
+        var csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+        if (csrf && csrfHeader) {
+            axios.defaults.headers.common[csrfHeader.getAttribute('content')] = csrf.getAttribute('content');
+        }
+
+        new Vue({
+            el: '#app',
+            data: function () {
+                return {
+                    loading: false,
+                    rows: [],
+                    dialogVisible: false,
+                    saving: false,
+                    form: { id: null, content: '', rating: 5 }
+                };
+            },
+            mounted: function () {
+                this.load();
+            },
+            methods: {
+                stars: function (rating) {
+                    var n = Number(rating) || 0;
+                    if (n < 1) n = 1;
+                    if (n > 5) n = 5;
+                    return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
+                },
+                ratingText: function (rating) {
+                    var n = Number(rating) || 0;
+                    if (n >= 5) return '非常满意';
+                    if (n >= 4) return '满意';
+                    if (n >= 3) return '一般';
+                    if (n >= 2) return '不太满意';
+                    return '较差';
+                },
+                load: function () {
+                    var vm = this;
+                    vm.loading = true;
+                    axios.get(API).then(function (res) {
+                        var b = res.data;
+                        vm.rows = b && b.code === 200 ? (b.data || []) : [];
+                    }).catch(function () {
+                        vm.rows = [];
+                        vm.$alert('加载评论失败，请稍后重试。', '提示', { type: 'error', confirmButtonText: '确定' });
+                    }).finally(function () {
+                        vm.loading = false;
+                    });
+                },
+                formatTime: function (v) {
+                    if (!v) return '—';
+                    return String(v).replace('T', ' ');
+                },
+                openEdit: function (r) {
+                    this.form = { id: r.id, content: r.content || '', rating: r.rating || 5 };
+                    this.dialogVisible = true;
+                },
+                submitEdit: function () {
+                    var vm = this;
+                    if (!vm.form.id) return;
+                    var content = (vm.form.content || '').trim();
+                    if (!content) {
+                        vm.$message.warning('请填写评论内容');
+                        return;
+                    }
+                    vm.saving = true;
+                    axios.put(API + '/' + vm.form.id, { content: content, rating: vm.form.rating || 5 })
+                        .then(function (res) {
+                            var b = res.data;
+                            if (!b || b.code !== 200) {
+                                return vm.$alert((b && b.message) || '保存失败', '提示', { type: 'error', confirmButtonText: '确定' });
+                            }
+                            vm.dialogVisible = false;
+                            vm.load();
+                            vm.$message.success('评论已更新');
+                        })
+                        .catch(function (e) {
+                            var m = '保存失败';
+                            if (e && e.response && e.response.data && e.response.data.message) m = e.response.data.message;
+                            vm.$alert(m, '提示', { type: 'error', confirmButtonText: '确定' });
+                        })
+                        .finally(function () { vm.saving = false; });
+                },
+                removeRow: function (r) {
+                    var vm = this;
+                    vm.$confirm('确定删除这条评论吗？', '删除确认', {
+                        type: 'warning',
+                        confirmButtonText: '删除',
+                        cancelButtonText: '取消'
+                    }).then(function () {
+                        return axios.delete(API + '/' + r.id);
+                    }).then(function () {
+                        vm.load();
+                        vm.$message.success('评论已删除');
+                    }).catch(function (e) {
+                        if (e === 'cancel') return;
+                        var m = '删除失败';
+                        if (e && e.response && e.response.data && e.response.data.message) m = e.response.data.message;
+                        vm.$alert(m, '提示', { type: 'error', confirmButtonText: '确定' });
+                    });
+                },
+                viewProduct: function (r) {
+                    var target = '/user/market/' + r.productId;
+                    var productName = String((r && r.productName) || '').trim();
+                    var status = String((r && r.productStatus) || '').trim().toUpperCase();
+                    if (!productName) {
+                        this.$alert('该商品已删除，无法查看详情。', '提示', {
+                            type: 'warning',
+                            confirmButtonText: '确定'
+                        });
+                        return;
+                    }
+                    if (status === 'OFF_SHELF') {
+                        var vm = this;
+                        vm.$alert('该商品已下架，将为你打开历史详情页（仅查看，不可购买）。', '提示', {
+                            type: 'warning',
+                            confirmButtonText: '查看详情'
+                        }).then(function () {
+                            window.location.href = target;
+                        });
+                        return;
+                    }
+                    window.location.href = target;
+                }
+            },
+            computed: {
+                avgRating: function () {
+                    if (!this.rows || this.rows.length === 0) {
+                        return '0.0';
+                    }
+                    var sum = 0;
+                    for (var i = 0; i < this.rows.length; i++) {
+                        sum += Number(this.rows[i].rating || 0);
+                    }
+                    return (sum / this.rows.length).toFixed(1);
+                }
+            }
+        });
+    })();
+</script>
+<script th:src="@{/js/flash-alert.js}"></script>
+</body>
+</html>

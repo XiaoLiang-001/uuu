@@ -10,36 +10,78 @@
 <header class="market-header">
     <div class="market-header-inner">
         <span class="market-brand">🌾 农家优品 · 集市</span>
-        <nav class="market-nav">
-            <a th:href="@{/user/cart}">购物车</a>
-            <a th:href="@{/user/orders}">我的订单</a>
-            <a th:href="@{/user/home}">用户中心</a>
-        </nav>
-        <form th:action="@{/logout}" method="post" class="inline">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <button type="submit" class="btn ghost market-logout">退出</button>
-        </form>
     </div>
 </header>
 <main class="market-main">
-    <p th:if="${err}" class="user-shop-alert err" th:text="${err}">错误</p>
-    <div class="market-hero">
-        <div class="market-hero-inner">
-            <div class="market-hero-text">
-                <p class="market-kicker">产地直供</p>
-                <h1 class="market-title">当季上架</h1>
-                <p class="market-sub">精选已上架商品，点击图片或标题查看详情与多图展示。</p>
-                <ul class="market-tags" aria-label="特色">
-                    <li>当日更新</li>
-                    <li>库存可见</li>
-                    <li>详情多图</li>
-                </ul>
+    <section class="market-category-filter-wrap market-category-filter-sticky"
+             th:if="${(provinceOptions != null and !#lists.isEmpty(provinceOptions)) or (categoryOptions != null and !#lists.isEmpty(categoryOptions))}"
+             aria-label="筛选速选">
+        <div class="market-category-filter-head">
+            <div class="market-category-filter-left">
+                <p class="market-category-filter-title">快捷筛选</p>
+                <p class="market-category-filter-sub">支持按名称/产地筛选，并可点击分类标签快速查看对应分类商品。</p>
             </div>
-            <div class="market-hero-art" aria-hidden="true">
-                <span class="market-hero-emoji">🥬</span>
+            <div class="market-quick-intro">
+                <div class="market-quick-intro-main">
+                    <p class="market-kicker">产地直供</p>
+                    <h1 class="market-title">当季上架</h1>
+                    <ul class="market-tags" aria-label="特色">
+                        <li>当日更新</li>
+                        <li>库存可见</li>
+                        <li>详情多图</li>
+                    </ul>
+                </div>
+                <span class="market-quick-intro-emoji" aria-hidden="true">🥬</span>
             </div>
         </div>
-    </div>
+        <div class="market-quick-filter-group" th:if="${provinceOptions != null and !#lists.isEmpty(provinceOptions)}">
+            <p class="market-quick-filter-label">产地</p>
+            <div class="market-category-filter market-province-filter">
+                <a class="market-category-chip market-province-chip"
+                   th:classappend="${provinceId == null} ? ' is-active' : ''"
+                   th:href="@{/user/market(page=1, size=${pageSize}, keyword=${keyword}, categoryId=${categoryId})}">
+                    全部产地
+                </a>
+                <a class="market-category-chip market-province-chip"
+                   th:each="pOpt : ${provinceOptions}"
+                   th:text="${pOpt.name}"
+                   th:classappend="${provinceId != null and provinceId == pOpt.id} ? ' is-active' : ''"
+                   th:href="@{/user/market(page=1, size=${pageSize}, keyword=${keyword}, provinceId=${pOpt.id}, categoryId=${categoryId})}">
+                    省份
+                </a>
+            </div>
+        </div>
+        <div class="market-quick-filter-group" th:if="${categoryOptions != null and !#lists.isEmpty(categoryOptions)}">
+            <p class="market-quick-filter-label">分类</p>
+            <div class="market-category-filter">
+                <a class="market-category-chip"
+                   th:classappend="${categoryId == null} ? ' is-active' : ''"
+                   th:href="@{/user/market(page=1, size=${pageSize}, keyword=${keyword}, provinceId=${provinceId})}">
+                    全部分类
+                </a>
+                <a class="market-category-chip"
+                   th:each="opt : ${categoryOptions}"
+                   th:text="${opt.name}"
+                   th:classappend="${categoryId != null and categoryId == opt.id} ? ' is-active' : ''"
+                   th:href="@{/user/market(page=1, size=${pageSize}, keyword=${keyword}, provinceId=${provinceId}, categoryId=${opt.id})}">
+                    分类
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <form method="get" th:action="@{/user/market}" class="market-filter-form">
+        <input type="hidden" name="size" th:value="${pageSize}"/>
+        <input type="hidden" name="provinceId" th:value="${provinceId}"/>
+        <input type="hidden" name="categoryId" th:value="${categoryId}"/>
+        <label class="market-filter-field">
+            <span>搜索</span>
+            <input type="text" name="keyword" maxlength="64" placeholder="输入商品名称"
+                   th:value="${keyword}"/>
+        </label>
+        <button type="submit" class="btn-landing primary market-filter-btn">筛选</button>
+        <a th:href="@{/user/market(size=${pageSize}, provinceId=${provinceId}, categoryId=${categoryId})}" class="btn-landing secondary market-filter-btn">重置</a>
+    </form>
     <div class="market-grid">
         <article class="market-card" th:each="p : ${products}">
             <a class="market-card-link" th:href="@{/user/market/{id}(id=${p.id})}">
@@ -49,6 +91,12 @@
                     <div th:unless="${covers.containsKey(p.id)}" class="market-card-placeholder">暂无图片</div>
                 </div>
                 <h2 class="market-card-name" th:text="${p.name}">名称</h2>
+                <p class="market-card-origin" th:if="${p.provinceName != null and p.provinceName != ''}">
+                    产地：<span th:text="${p.provinceName}">山东</span>
+                </p>
+                <p class="market-card-origin" th:if="${p.categoryName != null and p.categoryName != ''}">
+                    分类：<span th:text="${p.categoryName}">蔬菜</span>
+                </p>
                 <p class="market-card-price">¥ <span th:text="${#numbers.formatDecimal(p.price,1,2)}">0.00</span></p>
             </a>
         </article>
@@ -62,7 +110,7 @@
         </p>
         <div th:if="${totalPages > 1}" class="market-pag-actions">
             <a th:if="${currentPage > 1}"
-               th:href="@{/user/market(page=${currentPage - 1}, size=${pageSize})}"
+               th:href="@{/user/market(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, provinceId=${provinceId}, categoryId=${categoryId})}"
                class="market-pag-btn market-pag-btn-prev"
                rel="prev">
                 <span class="market-pag-ico" aria-hidden="true">‹</span>
@@ -75,7 +123,7 @@
                 <span>上一页</span>
             </span>
             <a th:if="${currentPage < totalPages}"
-               th:href="@{/user/market(page=${currentPage + 1}, size=${pageSize})}"
+               th:href="@{/user/market(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, provinceId=${provinceId}, categoryId=${categoryId})}"
                class="market-pag-btn market-pag-btn-next"
                rel="next">
                 <span>下一页</span>
@@ -90,6 +138,9 @@
         </div>
         <form method="get" th:action="@{/user/market}" class="market-pag-size-form">
             <input type="hidden" name="page" value="1"/>
+            <input type="hidden" name="keyword" th:value="${keyword}"/>
+            <input type="hidden" name="provinceId" th:value="${provinceId}"/>
+            <input type="hidden" name="categoryId" th:value="${categoryId}"/>
             <label class="market-pag-size-label">
                 <span>每页显示</span>
                 <select name="size" class="market-pag-select" onchange="this.form.submit()" th:attr="aria-label='每页条数'">
@@ -102,5 +153,8 @@
         </form>
     </nav>
 </main>
+<p th:if="${msg}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${msg}">提示</p>
+<p th:if="${err}" class="js-flash-alert" data-alert-mode="top-or-user-shell" hidden th:text="${err}">错误</p>
+<script th:src="@{/js/flash-alert.js}"></script>
 </body>
 </html>

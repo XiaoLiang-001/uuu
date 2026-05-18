@@ -19,13 +19,13 @@
         </div>
         <nav class="admin-sidebar-nav" aria-label="管理功能">
             <a class="admin-nav-item is-active"
-               th:href="@{/admin/users}"
-               th:attr="data-frame-url=@{/admin/users}"
-               data-match-prefix="/admin/users"
-               data-title="用户管理"
-               data-desc="查看系统用户，并对普通用户调整账号启用状态。">
-                <span class="admin-nav-icon" aria-hidden="true">👥</span>
-                <span>用户管理</span>
+               th:href="@{/user/market}"
+               th:attr="data-frame-url=@{/user/market}"
+               data-match-prefix="/user/market"
+               data-title="集市预览"
+               data-desc="以用户视角查看集市与详情页，确认展示是否符合预期。">
+                <span class="admin-nav-icon" aria-hidden="true">🛒</span>
+                <span>集市预览</span>
             </a>
             <a class="admin-nav-item"
                th:href="@{/admin/products}"
@@ -37,13 +37,22 @@
                 <span>农产品管理</span>
             </a>
             <a class="admin-nav-item"
-               th:href="@{/user/market}"
-               th:attr="data-frame-url=@{/user/market}"
-               data-match-prefix="/user/market"
-               data-title="集市预览"
-               data-desc="以用户视角查看集市与详情页，确认展示是否符合预期。">
-                <span class="admin-nav-icon" aria-hidden="true">🛒</span>
-                <span>集市预览</span>
+               th:href="@{/admin/taxonomy}"
+               th:attr="data-frame-url=@{/admin/taxonomy}"
+               data-match-prefix="/admin/taxonomy"
+               data-title="分类管理"
+               data-desc="统一管理省份与分类字典，支撑集市筛选与商品归类。">
+                <span class="admin-nav-icon" aria-hidden="true">🗂️</span>
+                <span>农产品分类管理</span>
+            </a>
+            <a class="admin-nav-item"
+               th:href="@{/admin/users}"
+               th:attr="data-frame-url=@{/admin/users}"
+               data-match-prefix="/admin/users"
+               data-title="用户管理"
+               data-desc="查看系统用户，并对普通用户调整账号启用状态。">
+                <span class="admin-nav-icon" aria-hidden="true">👥</span>
+                <span>用户管理</span>
             </a>
             <a class="admin-nav-item"
                th:href="@{/user/profile}"
@@ -56,7 +65,6 @@
             </a>
         </nav>
         <form th:action="@{/logout}" method="post" class="inline admin-sidebar-logout-form">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <button type="submit" class="btn-landing ghost admin-ghost admin-sidebar-logout">退出登录</button>
         </form>
     </aside>

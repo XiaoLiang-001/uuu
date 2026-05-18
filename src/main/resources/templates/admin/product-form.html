@@ -15,7 +15,6 @@
             <div class="product-form-topbar-actions">
                 <a th:href="@{/admin/products}">返回列表</a>
                 <form th:action="@{/logout}" method="post" class="inline">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                     <button type="submit" class="product-form-logout-btn">退出</button>
                 </form>
             </div>
@@ -49,6 +48,22 @@
                     </select>
                 </label>
                 <label>
+                    产地（可选可填）
+                    <input type="text" name="provinceName" maxlength="32" list="provinceNameOptions"
+                           placeholder="可下拉选择，也可直接输入，如：黑龙江"/>
+                    <datalist id="provinceNameOptions">
+                        <option th:each="opt : ${provinceOptions}" th:value="${opt.name}">省份</option>
+                    </datalist>
+                </label>
+                <label>
+                    商品分类（可选可填）
+                    <input type="text" name="categoryName" maxlength="32" list="categoryNameOptions"
+                           placeholder="可下拉选择，也可直接输入，如：蔬菜"/>
+                    <datalist id="categoryNameOptions">
+                        <option th:each="opt : ${categoryOptions}" th:value="${opt.name}">分类</option>
+                    </datalist>
+                </label>
+                <label>
                     商品图片（可多选，jpg/png/gif/webp，单文件≤10MB）
                     <input type="file" name="images" accept="image/*" multiple/>
                 </label>
@@ -56,7 +71,6 @@
                     <p class="product-form-preview-kicker">待上传图片预览</p>
                     <div id="productImagesPreview" class="product-form-preview-wrap"></div>
                 </div>
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <button type="submit" class="product-form-submit-btn">提交上架</button>
             </form>
         </div>
@@ -77,11 +91,25 @@
             this.value = '0';
         }
     });
+
+    var form = document.querySelector('.product-form-card form[method="post"]');
+    var submitBtn = form ? form.querySelector('.product-form-submit-btn') : null;
+    var submitting = false;
+    if (form && submitBtn) {
+        form.addEventListener('submit', function (event) {
+            if (submitting) {
+                event.preventDefault();
+                return false;
+            }
+            submitting = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
+        });
+    }
 })();
 </script>
 <script th:src="@{/js/product-image-preview.js}"></script>
-<script th:inline="javascript" th:if="${error != null}">
-    alert([[${error}]]);
-</script>
+<p th:if="${error}" class="js-flash-alert" data-alert-mode="always" hidden th:text="${error}">错误</p>
+<script th:src="@{/js/flash-alert.js}"></script>
 </body>
 </html>
