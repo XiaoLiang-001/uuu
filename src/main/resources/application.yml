@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3307/ncp?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectTimeout=30000&socketTimeout=60000&tcpKeepAlive=true
     username: root
-    password: "147258369"
+    password: ""
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 1
